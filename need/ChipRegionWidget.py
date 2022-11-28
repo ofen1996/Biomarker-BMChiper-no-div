@@ -7,7 +7,8 @@ from PIL import Image, ImageQt
 import random
 import numpy as np
 import cv2
-# from MRXSBase import MRXSBase
+import tifffile
+from need.MRXSBase import MRXSBase
 
 
 
@@ -26,6 +27,7 @@ class ChipRegionWidget(QWidget):
 
         self.setMouseTracking(True)
 
+        self.image_filename = None
 
         # self.corr_spots = CorrSpotsData()
         pass
@@ -213,16 +215,18 @@ class ChipRegionWidget(QWidget):
     def read_image(self, image_filename):
         self.image_filename = image_filename
         # 处理mrxs格式图片
-        # if image_filename[-4:] == 'MRXS' or image_filename[-4:] == 'mrxs':
-        #     mb = MRXSBase(slide_file=image_filename)
-        #     img_level = 2
-        #     img = mb.extract_img_by_level(img_level)
-        #     img = MRXSBase.mrxs_img_to_cv2(img)
-        #     tif_file = f"{image_filename[:-5]}_level{img_level}.tif"
-        #     cv2.imwrite(tif_file, img)
-        #     self.image_filename = tif_file
+        if image_filename[-4:] == 'MRXS' or image_filename[-4:] == 'mrxs':
+            mb = MRXSBase(slide_file=image_filename)
+            img = mb.extract_img_by_level(2)
         # 图片读取
-        img = Image.open(self.image_filename)
+        else:
+            # img = tifffile.imread(self.image_filename, level=0)
+            with tifffile.TiffFile(self.image_filename) as tif:
+                if tif.is_bigtiff:
+                    img = tif.asarray(level=2)
+                else:
+                    img = tif.asarray(level=0)
+            img = Image.fromarray(img)
         # 图片缩放
         level_num = self.draw_argvs['zoom_level_num']
         for i in range(level_num):
@@ -236,6 +240,34 @@ class ChipRegionWidget(QWidget):
         self.draw_argvs['draw_center_pos'] = [int(img.size[0]/2), int(img.size[1]/2)]
         self.draw_argvs['win_center_pos'] = [int(self.width() / 2), int(self.height() / 2)]
         pass
+    # 重写鼠标点击按下的事件处理函数
+
+    # def read_image(self, image_filename):
+    #     self.image_filename = image_filename
+    #     # 处理mrxs格式图片
+    #     if image_filename[-4:] == 'MRXS' or image_filename[-4:] == 'mrxs':
+    #         mb = MRXSBase(slide_file=image_filename)
+    #         img_level = 2
+    #         img = mb.extract_img_by_level(img_level)
+    #         # img = MRXSBase.mrxs_img_to_cv2(img)
+    #         tif_file = f"{image_filename[:-5]}_level{img_level}.tif"
+    #         cv2.imwrite(tif_file, img)
+    #         self.image_filename = tif_file
+    #     # 图片读取
+    #     img = Image.open(self.image_filename)
+    #     # 图片缩放
+    #     level_num = self.draw_argvs['zoom_level_num']
+    #     for i in range(level_num):
+    #         if i == level_num - 1:
+    #             self.draw_argvs['zoom_imgs'][i] = img
+    #         else:
+    #             level_scale = self.draw_argvs['zoom_levels'][level_num-1-i]
+    #             newsize = (int(img.size[0] / level_scale), int(img.size[1] / level_scale))
+    #             self.draw_argvs['zoom_imgs'][i] = img.resize(newsize)
+    #     # 初始焦点设置
+    #     self.draw_argvs['draw_center_pos'] = [int(img.size[0]/2), int(img.size[1]/2)]
+    #     self.draw_argvs['win_center_pos'] = [int(self.width() / 2), int(self.height() / 2)]
+    #     pass
     # 重写鼠标点击按下的事件处理函数
     def mousePressEvent(self, evt):
         if self.draw_argvs['zoom_imgs'][0] is None:
@@ -267,12 +299,12 @@ class ChipRegionWidget(QWidget):
         pass
     # 重写鼠标移动事件函数
     def mouseMoveEvent(self, evt):
-        print("mouse start move")
+        # print("mouse start move")
         if self.draw_argvs['zoom_imgs'][0] is None:
             return
         # 实时更新鼠标位置
         self.draw_argvs['curr_mouse'] = [evt.x(), evt.y()]
-        print(f"curr_mouse:{self.draw_argvs['curr_mouse']}")
+        # print(f"curr_mouse:{self.draw_argvs['curr_mouse']}")
         # self.update()
         # 移动图片
         # time.sleep(0.3)
@@ -302,10 +334,10 @@ class ChipRegionWidget(QWidget):
             self.draw_argvs['draw_center_pos'] = [ori_img_move_x, ori_img_move_y]
             # 刷新界面
 
-        print(f"draw_center_pos:{self.draw_argvs['draw_center_pos']}")
+        # print(f"draw_center_pos:{self.draw_argvs['draw_center_pos']}")
         self.update()
 
-        print("mouse move")
+        # print("mouse move")
         pass
 
     # 重写鼠标释放事件函数
@@ -417,6 +449,7 @@ class ChipRegionWidget(QWidget):
 
         # 变换矩阵
         desc_box = [[0, 0], [img_w, 0], [img_w, img_h], [0, img_h]]
+        reg_box = self.draw_argvs['rect_points']
         M = self.M_matrix(reg_box, desc_box)
         # 透视变换
         ori_img = self.draw_argvs['zoom_imgs'][-1]
@@ -426,6 +459,7 @@ class ChipRegionWidget(QWidget):
 
         tif_file = f"{self.image_filename[:-4]}_chip.tif"
         cv2.imwrite(tif_file, warped[:,:,[2,1,0]])
+        return tif_file
 
 
     def M_matrix(self, scr_rect, dst_rect):

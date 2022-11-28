@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>998</width>
-    <height>679</height>
+    <width>847</width>
+    <height>581</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -25,8 +25,8 @@
         <rect>
          <x>0</x>
          <y>0</y>
-         <width>485</width>
-         <height>614</height>
+         <width>410</width>
+         <height>519</height>
         </rect>
        </property>
        <layout class="QGridLayout" name="gridLayout_3">
@@ -59,8 +59,8 @@
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>467</width>
-             <height>281</height>
+             <width>392</width>
+             <height>230</height>
             </rect>
            </property>
            <attribute name="label">
@@ -81,21 +81,15 @@
             </property>
             <item>
              <widget class="QWidget" name="widget_2" native="true">
-              <layout class="QGridLayout" name="gridLayout_5">
-               <property name="leftMargin">
-                <number>0</number>
-               </property>
-               <property name="rightMargin">
-                <number>0</number>
-               </property>
-               <item row="1" column="0">
+              <layout class="QVBoxLayout" name="verticalLayout">
+               <item>
                 <widget class="QPushButton" name="load_he_pic">
                  <property name="text">
                   <string>加载HE图片</string>
                  </property>
                 </widget>
                </item>
-               <item row="2" column="0">
+               <item>
                 <layout class="QGridLayout" name="gridLayout_4">
                  <item row="2" column="1">
                   <widget class="QPushButton" name="bnt_right_bottom">
@@ -127,10 +121,50 @@
                  </item>
                 </layout>
                </item>
-               <item row="3" column="0">
+               <item>
                 <widget class="QPushButton" name="save_chip_rect">
                  <property name="text">
                   <string>保存区域</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QComboBox" name="comboBox_camera_type">
+                 <property name="enabled">
+                  <bool>false</bool>
+                 </property>
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <item>
+                  <property name="text">
+                   <string>Point...(2448, 2048)</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>pco...(2048, 2048)</string>
+                  </property>
+                 </item>
+                </widget>
+               </item>
+               <item>
+                <widget class="QPushButton" name="stitch_chip">
+                 <property name="enabled">
+                  <bool>false</bool>
+                 </property>
+                 <property name="text">
+                  <string>缝合并裁剪</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QPushButton" name="correct_whole">
+                 <property name="text">
+                  <string>全图校准(需先裁剪)</string>
                  </property>
                 </widget>
                </item>
@@ -157,8 +191,8 @@
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>467</width>
-             <height>243</height>
+             <width>392</width>
+             <height>196</height>
             </rect>
            </property>
            <attribute name="label">
@@ -234,8 +268,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>998</width>
-     <height>23</height>
+     <width>847</width>
+     <height>22</height>
     </rect>
    </property>
   </widget>
@@ -255,8 +289,8 @@
    <slot>auto_reg_chip_region_cao()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>189</x>
-     <y>116</y>
+     <x>197</x>
+     <y>115</y>
     </hint>
     <hint type="destinationlabel">
      <x>332</x>
@@ -271,8 +305,8 @@
    <slot>collect_point_left_top_cao()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>132</x>
-     <y>202</y>
+     <x>150</x>
+     <y>128</y>
     </hint>
     <hint type="destinationlabel">
      <x>332</x>
@@ -287,8 +321,8 @@
    <slot>collect_point_left_bottom_cao()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>120</x>
-     <y>231</y>
+     <x>138</x>
+     <y>157</y>
     </hint>
     <hint type="destinationlabel">
      <x>334</x>
@@ -303,8 +337,8 @@
    <slot>open_he_img_cao()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>131</x>
-     <y>172</y>
+     <x>148</x>
+     <y>98</y>
     </hint>
     <hint type="destinationlabel">
      <x>334</x>
@@ -319,8 +353,8 @@
    <slot>collect_point_right_bottom_cao()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>283</x>
-     <y>231</y>
+     <x>400</x>
+     <y>157</y>
     </hint>
     <hint type="destinationlabel">
      <x>335</x>
@@ -335,8 +369,8 @@
    <slot>collect_point_right_top_cao()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>283</x>
-     <y>202</y>
+     <x>400</x>
+     <y>128</y>
     </hint>
     <hint type="destinationlabel">
      <x>335</x>
@@ -351,12 +385,44 @@
    <slot>save_chip_region_rect_cao()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>131</x>
-     <y>261</y>
+     <x>148</x>
+     <y>187</y>
     </hint>
     <hint type="destinationlabel">
      <x>332</x>
      <y>369</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>stitch_chip</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>stitch_chip_cao()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>271</x>
+     <y>241</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>498</x>
+     <y>339</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>correct_whole</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>correct_whole_cao()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>217</x>
+     <y>259</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>423</x>
+     <y>290</y>
     </hint>
    </hints>
   </connection>
@@ -369,5 +435,7 @@
   <slot>collect_point_right_bottom_cao()</slot>
   <slot>collect_point_left_bottom_cao()</slot>
   <slot>save_chip_region_rect_cao()</slot>
+  <slot>stitch_chip_cao()</slot>
+  <slot>correct_whole_cao()</slot>
  </slots>
 </ui>

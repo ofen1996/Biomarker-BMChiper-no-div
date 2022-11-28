@@ -1,4 +1,7 @@
 import sys
+import traceback
+
+import numpy as np
 from PIL import Image
 Image.MAX_IMAGE_PIXELS = 3000000000
 import cv2
@@ -7,11 +10,14 @@ import matplotlib.pyplot as plt
 from PyQt5 import QtWidgets
 import os
 from PyQt5.Qt import *
-
-from ChipRegion import Ui_MainWindow
+import tifffile
+from need.ChipRegion import Ui_MainWindow
 # from MRXSBase import MRXSBase
-from ChipRegionWidget import ChipRegionWidget
-from FileDirBase import FileDirBase
+from need.ChipRegionWidget import ChipRegionWidget
+from need.FileDirBase import FileDirBase
+from need.stitch_pic import StitchImg
+
+from need.CorrectWholeImg import correct_whole_img
 
 
 
@@ -76,9 +82,15 @@ class ChipRegionMain(QMainWindow, Ui_MainWindow):
     def open_he_img_cao(self):
         if not isinstance(self.widget_right, ChipRegionWidget):
             self.chip_region_setup_env()
-        filename_choose = FileDirBase.open_file(self,'*.tif *.tiff')
+        filename_choose = FileDirBase.open_file(self,'*.tif *.tiff *.mrxs')
         if filename_choose is None:
             return
+        if filename_choose.endswith(".mrxs"):
+            self.comboBox_camera_type.setEnabled(True)
+            self.stitch_chip.setEnabled(True)
+        else:
+            self.comboBox_camera_type.setEnabled(False)
+            self.stitch_chip.setEnabled(False)
         self.widget_right.read_image(filename_choose)
 
         pass
@@ -103,12 +115,49 @@ class ChipRegionMain(QMainWindow, Ui_MainWindow):
     # 保存芯片区域的4个顶点的信息
     def save_chip_region_rect_cao(self):
         rect_points = self.widget_right.min_rect_points()
-        self.widget_right.warp_save_chip_region(rect_points)
-        print("rect_points",rect_points)
+        tif_file = self.widget_right.warp_save_chip_region(rect_points)
+        print("rect_points", rect_points)
+        self.widget_right.image_filename = tif_file
+        self.widget_right.read_image(tif_file)
+
+        pass
+
+    # 缝合并裁剪图像
+    def stitch_chip_cao(self):
+        if [-1, -1] in self.widget_right.draw_argvs['rect_points']:
+            print("请先选择4个点")
+            return
+        try:
+            corners = np.asarray(self.widget_right.draw_argvs['rect_points'])
+            camera_resolutions = [(2448, 2048), (2048, 2048)]
+            camera_resolution = camera_resolutions[self.comboBox_camera_type.currentIndex()]
+            print("camera_resolution:" + str(camera_resolution))
+            st_img = StitchImg(self.widget_right.image_filename, corners * 4, camera_resolution)
+            new_corners, level_2_path = st_img.cut_and_stitch()
+
+            # level_2_path = "./test.tif"
+            # tifffile.imwrite(level_2_path, np.asarray(self.widget_right.draw_argvs['zoom_imgs'][-1])[:, :, :3], compression="jpeg")
+
+            self.widget_right.image_filename = level_2_path
+            self.widget_right.read_image(level_2_path)
+        except Exception as e:
+            print(traceback.format_exc(), e)
+            return
+
         pass
 
 
-
+    def correct_whole_cao(self):
+        print("Start correct whole img")
+        if self.widget_right.image_filename is not None:
+            try:
+                correct_whole_img(self.widget_right.image_filename)
+            except Exception as e:
+                print(traceback.format_exc(), e)
+                return
+        else:
+            print("No img Path")
+        pass
 
 
     # -------------------------------------------------------------------------

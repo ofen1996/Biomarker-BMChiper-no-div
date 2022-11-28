@@ -1,0 +1,294 @@
+# import time
+import os
+import cv2
+import numpy as np
+# import skimage
+# import tifffile
+#
+# from need.ofen_tool import show_img
+from need.KpDetectByYolo import MyDetector
+
+
+h_num, w_num = (10, 10)  # 切成100份
+try:
+    detector = MyDetector("./model/best.onnx")
+except:
+    detector = MyDetector("../model/best.onnx")
+DEBUG = False
+
+
+# 依据HE图片的实际大小进行缩放比例计算
+# width：HE图片的宽
+# height: HE图片的高
+def cal_zoom_rate(width, height):
+    std_width = 1000
+    std_height = std_width / (46 * 31) * (46 * 36 * np.sqrt(3) / 2.0)
+    if std_width / std_height > width / height:
+        scale = width / std_width
+    else:
+        scale = height / std_height
+    return scale
+
+
+def gen_std_board_loc(zoom_scale):
+    img_width = 1000
+    std_kp_loc = np.zeros((45, 45, 2), dtype=float)
+    std_w = 1.0 * img_width / 46 / 31 * zoom_scale
+    std_h = std_w * np.sqrt(3) / 2
+
+    for h in range(45):
+        for w in range(45):
+            h_loc = (h + 1) * 36 * std_h
+            w_loc = (w + 1) * 31 * std_w - std_w / 2  # 一定是偶数行
+            std_kp_loc[w, h] = w_loc, h_loc
+    return std_kp_loc, (std_w, std_h)
+
+
+def gen_std_board_img(width, height, std_kp_loc=None, save_dir=None):
+    zoom_scale = cal_zoom_rate(width, height)
+    img_width = 1000
+    std_w = 1.0 * img_width / 46 / 31 * zoom_scale
+    std_h = std_w * np.sqrt(3) / 2
+
+    radius = round(std_w * 0.618 / 2) if round(std_w * 0.618 / 2) > 1 else 1
+    std_board = np.zeros((height, width), dtype=np.uint8)
+    for h in range(46 * 36):
+        for w in range(46 * 31):
+            if h % 36 == 0 or w % 31 == 0:
+                continue  # 边界点跳过
+            tmp_w = w * std_w
+            tmp_h = h * std_h
+            if h % 2 == 0:  # 偶数行，w位置减去1/2
+                tmp_w = tmp_w - std_w * 0.5
+            cv2.circle(std_board, (round(tmp_w), round(tmp_h)), radius, 255, -1)
+
+    if std_kp_loc is not None:
+        # 画一个标准点位参考图
+        for x in range(45):
+            for y in range(45):
+                cv2.circle(std_board, tuple(map(int, std_kp_loc[x, y])), 11, 255, -1)
+        if DEBUG:
+            cv2.imwrite(os.path.join(save_dir, "std_kp_img.tif"), std_board)
+
+    return std_board
+
+
+def locate_split(div_sum):
+    # 通过双指针方法，找到归一化数据div_sum的45个分割区域
+    split = []
+    tmp_start = 0
+    tmp_end = 0
+    for i, y_sum in enumerate(div_sum):
+        if i < tmp_end:  # 双指针，i小于下降沿跳过
+            continue
+        if y_sum >= 0.1 and tmp_end >= tmp_start:
+            # 上升沿
+            # print("up", i)
+            tmp_start = i
+            tmp_end = tmp_start + 1
+            for j in range(tmp_end, tmp_end + (len(div_sum) // 50)):
+                if div_sum[j] >= 0.1:
+                    continue
+                else:
+                    tmp_end = j
+                    break
+            split.append([tmp_start, tmp_end])
+    return split
+
+
+def detect_kp(img):
+    # 预测全图的所有关键点。将原图裁剪为h_num, w_num后，使用yolo预测关键点
+    size_h, size_w = img.shape[:2]
+    distance_h, distance_w = size_h // h_num, size_w // w_num
+
+    k_p_loc = []
+    for div_h in range(h_num):
+        print(div_h)
+        for div_w in range(w_num):
+            start_h, start_w = div_h * distance_h, div_w * distance_w
+            # 截取图像外扩0.05*distance，避免边缘识别效果不好
+            distance_add = int(min(distance_h, distance_w) * 0.05)
+            part_img = img[max(0, start_h - distance_add): start_h + int(distance_h * 1.05),
+                       max(0, start_w - distance_add): start_w + int(distance_w * 1.05), :]
+
+            out_img, centers = detector.detect(part_img, 0.7)
+            for center in centers:
+                center[:2] = center[:2] + np.asarray((max(0, start_w - distance_add), max(0, start_h - distance_add)))
+            # 过滤掉边缘的识别点，避免重复
+            centers = [center for center in centers if (start_w < center[0] < start_w + distance_w and
+                                                        start_h < center[1] < start_h + distance_h)]
+            k_p_loc.extend(centers)
+            # show_img(out_img)
+            # show_img(part_img)
+            pass
+    print("End detect kp")
+    return k_p_loc
+
+
+def filter_kp(k_p_loc, judge_range, img, save_dir="./"):
+
+    kp_range = judge_range // 2
+    print(judge_range)
+    # 绘制关键点的重合区域，以此作为众数过滤偏移过大的错误点
+    label = np.zeros(img.shape[:2], dtype=np.uint8)
+    for kp in k_p_loc:
+        x, y, conf = kp
+        if not (judge_range * 2 < x < img.shape[1] - judge_range * 2 and
+                judge_range * 2 < y < img.shape[0] - judge_range * 2):
+            continue  # skip edge point
+        # cv2.circle(label, (x, y), 3, (255, 255, 255), -1)
+        label[:, x - kp_range: x + kp_range] += 255 // 46 // 2
+        label[y - kp_range: y + kp_range, :] += 255 // 46 // 2
+        # cv2.line(label, (x, 0), (x, img.shape[0]), (255//46), judge_range)
+        # cv2.line(label, (0, y), (img.shape[1], y), (255//46), judge_range)
+    if DEBUG:
+        cv2.imwrite(os.path.join(save_dir, "./label.tif"), label)
+    print("End draw label")
+
+    # 根据label筛选可信区域，过滤k_p
+    label_nom = label / label.max()  # 归一化
+    kp_loc_confidence = np.where(label_nom > 0.55, 1.0, 0)  # 置信区域
+    kp_loc_confidence = cv2.dilate(kp_loc_confidence, kernel=np.ones(shape=[3, 3]))
+    kp_loc_confidence = cv2.erode(kp_loc_confidence, kernel=np.ones(shape=[3, 3]))
+    wrong_kp = []
+    kp_final = []
+    for i, kp in enumerate(k_p_loc):
+        if not kp_loc_confidence[kp[1], kp[0]]:
+            wrong_kp.append(kp)
+            cv2.circle(img, (kp[0], kp[1]), 13, (0, 0, 255), -1)
+        else:
+            kp_final.append(kp)
+            # 在图像上画点
+            cv2.circle(img, (kp[0], kp[1]), 3, (0, 0, 0), -1)
+            cv2.putText(img, str(round(kp[2], 2)), (int(kp[0]), int(kp[1])), 0, 1, (0, 255, 0),
+                        thickness=2)
+
+    print("End draw img")
+    if DEBUG:
+        cv2.imwrite(os.path.join(save_dir, "./kp_filter.tif"), img)
+    return kp_final, wrong_kp, kp_loc_confidence
+
+
+def kp_serialize(kp_final, kp_loc_confidence, judge_range):
+    # 将关键点按顺序定位，序列化
+    y_div_sum = [sum(kp_loc_confidence[i, :]) for i in range(kp_loc_confidence.shape[0])]
+    x_div_sum = [sum(kp_loc_confidence[:, i]) for i in range(kp_loc_confidence.shape[1])]
+    y_div_sum = np.convolve(y_div_sum, np.ones(5), 1)  # 抹平每一行的波动
+    x_div_sum = np.convolve(x_div_sum, np.ones(5), 1)  # 抹平每一行的波动
+    y_div_sum = y_div_sum / y_div_sum.max()  # 归一化
+    x_div_sum = x_div_sum / x_div_sum.max()  # 归一化
+    y_range_split = locate_split(y_div_sum)
+    x_range_split = locate_split(x_div_sum)  # [[99, 136], [217, 255], ...] 统计每个点位出现的范围 len=45
+
+    # 将所有kp定位回(45, 45)位置矩阵内
+    real_kp_loc = np.zeros((45, 45, 3), dtype=float)
+    for kp in kp_final:
+        x, y, conf = kp
+        # print(kp)
+        x_index = abs(np.asarray(x_range_split) - x).argmin() // 2  # 找到距离x_range最近的索引，//2是因为 argmin是展平检索最小值
+        y_index = abs(np.asarray(y_range_split) - y).argmin() // 2
+        rel_loc = (sum(x_range_split[x_index]) / 2, sum(y_range_split[y_index]) / 2)  # 参考位置
+        if np.linalg.norm(rel_loc - np.asarray([x, y])) > judge_range * np.sqrt(2):  # 如果欧式距离差距过大，则抛弃之
+            continue
+        if real_kp_loc[x_index, y_index][2] < conf:  # 如果一个索引内有 多个点，取置信度最高的
+            real_kp_loc[x_index, y_index] = kp
+    return real_kp_loc
+
+
+def kp_auto_complete(real_kp_loc):
+    # 根据现有kp位置，求出相邻点的间距的中位数x_spacing, y_spacing
+    x_spacing, y_spacing = (np.median(np.gradient(real_kp_loc[:, :, 0])[0]),
+                            np.median(np.gradient(real_kp_loc[:, :, 1])[1]))
+
+    # 补全缺失点
+    real_kp_loc_plus = real_kp_loc.copy()
+    for y in range(45):
+        for x in range(45):
+            x_loc, y_loc, conf = real_kp_loc_plus[x, y]
+            if conf == 0:
+                # 从上下左右4个点找1个点计算
+                if y - 1 >= 0 and real_kp_loc_plus[x, y - 1][2] > 0:
+                    x_loc = real_kp_loc_plus[x, y - 1][0]
+                    y_loc = real_kp_loc_plus[x, y - 1][1] + y_spacing
+
+                elif y + 1 < 45 and real_kp_loc_plus[x, y + 1][2] > 0:
+                    x_loc = real_kp_loc_plus[x, y + 1][0]
+                    y_loc = real_kp_loc_plus[x, y + 1][1] - y_spacing
+
+                elif x - 1 >= 0 and real_kp_loc_plus[x - 1, y][2] > 0:
+                    x_loc = real_kp_loc_plus[x - 1, y][0] + x_spacing
+                    y_loc = real_kp_loc_plus[x - 1, y][1]
+
+                elif x + 1 < 45 and real_kp_loc_plus[x + 1, y][2] > 0:
+                    x_loc = real_kp_loc_plus[x + 1, y][0] - x_spacing
+                    y_loc = real_kp_loc_plus[x + 1, y][1]
+
+                real_kp_loc_plus[x, y] = [x_loc, y_loc, 0.5]
+    return real_kp_loc_plus
+
+
+def draw_kp_in_img(img, real_kp_loc_plus, save_dir=None):
+    # 画图验证点位的准确性
+    for y in range(45):
+        for x in range(45):
+            kp = real_kp_loc_plus[x, y]
+            cv2.circle(img, (int(kp[0]), int(kp[1])), 10, (0, 0, 0), 3)
+            cv2.putText(img, "({},{})".format(int(x), int(y)), (int(kp[0]), int(kp[1]) + 20), 0, 1, (0, 255, 0),
+                        thickness=2)
+    if DEBUG:
+        cv2.imwrite(os.path.join(save_dir, "./test_plus.tif"), img)
+    return img
+
+
+def correct_whole_img(img_path):
+    save_dir = os.path.split(img_path)[0]
+    img_name = os.path.split(img_path)[1]
+    save_dir = os.path.join(save_dir, os.path.splitext(img_name)[0])
+    if not os.path.exists(save_dir):
+        os.mkdir(save_dir)
+
+    img = cv2.imread(img_path)
+    if img.shape[0] > 10000:
+        zoom_rate = img.shape[0] / 10000
+        new_size = (np.asarray(img.shape[:2]) / zoom_rate).astype(dtype=int)
+        img = cv2.resize(img, new_size[::-1])
+    img_dist = img.copy()
+    # 判断常数，以一个块的宽度0.3为标准
+    judge_range = int(min(img.shape[:2]) / 46 * 0.3)
+    # 识别关键点
+    k_p_loc = detect_kp(img)
+    # 过滤错误点
+    kp_final, wrong_kp, kp_loc_confidence = filter_kp(k_p_loc, judge_range, img, save_dir)
+    # 关键点序列化，把所有关键点对应到（45， 45）的位置上
+    real_kp_loc = kp_serialize(kp_final, kp_loc_confidence, judge_range)
+    # 补全缺失关键点
+    real_kp_loc_plus = kp_auto_complete(real_kp_loc)
+
+    print("Calculate Homography")
+    # 画标准点图
+    zoom_scale = cal_zoom_rate(img.shape[1], img.shape[0])
+    std_kp_loc, std_w_h = gen_std_board_loc(zoom_scale)
+    # 计算单应性矩阵, 对kp做std_w_h/2的位置修正，方向为左下
+    real_kp_loc_plus[:, :, :2] = real_kp_loc_plus[:, :, :2] + [-std_w_h[0]*0.4, std_w_h[0]*0.3]
+    draw_kp_in_img(img, real_kp_loc_plus, save_dir)  # 画一下修正后的kp位置
+
+    # 变换图像
+    h, status = cv2.findHomography(real_kp_loc_plus.reshape(-1, 3)[:, :2], std_kp_loc.reshape(-1, 2), 0)
+    img_dist = cv2.warpPerspective(img_dist, h, img.shape[:2][::-1],
+                                   borderMode=cv2.BORDER_CONSTANT, borderValue=(255, 255, 255))
+    cv2.imwrite(os.path.join(save_dir, "img_dist.tif"), img_dist)
+
+    test_dst = cv2.warpPerspective(img, h, img.shape[:2][::-1],
+                                   borderMode=cv2.BORDER_CONSTANT, borderValue=(255, 255, 255))
+    # 画一个标准点位图，用作参考
+    std_board_img = gen_std_board_img(img.shape[1], img.shape[0], std_kp_loc, save_dir)
+    std_board_img = cv2.cvtColor(std_board_img, cv2.COLOR_GRAY2BGR)
+    cv2.imwrite(os.path.join(save_dir, "std_board.tif"), std_board_img)
+    test_dst = (test_dst * 0.85 + std_board_img * 0.15).astype(dtype=np.uint8)  # 叠加
+    cv2.imwrite(os.path.join(save_dir, "tmp.tif"), test_dst)
+
+
+if __name__ == '__main__':
+    img_path = r"E:\0920-1#--6um-202283-BG27BN04F4-A3__1#.tif"
+    correct_whole_img(img_path)
+
