@@ -60,7 +60,7 @@
              <x>0</x>
              <y>0</y>
              <width>392</width>
-             <height>230</height>
+             <height>259</height>
             </rect>
            </property>
            <attribute name="label">
@@ -126,29 +126,6 @@
                  <property name="text">
                   <string>保存区域</string>
                  </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QComboBox" name="comboBox_camera_type">
-                 <property name="enabled">
-                  <bool>false</bool>
-                 </property>
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                   <horstretch>0</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
-                 </property>
-                 <item>
-                  <property name="text">
-                   <string>Point...(2448, 2048)</string>
-                  </property>
-                 </item>
-                 <item>
-                  <property name="text">
-                   <string>pco...(2048, 2048)</string>
-                  </property>
-                 </item>
                 </widget>
                </item>
                <item>

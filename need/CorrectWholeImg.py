@@ -1,12 +1,15 @@
 # import time
 import os
 import cv2
+import tifffile
 import numpy as np
+import configparser
 # import skimage
 # import tifffile
 #
 # from need.ofen_tool import show_img
 from need.KpDetectByYolo import MyDetector
+from need.config import conf
 
 
 h_num, w_num = (10, 10)  # 切成100份
@@ -14,7 +17,6 @@ try:
     detector = MyDetector("./model/best.onnx")
 except:
     detector = MyDetector("../model/best.onnx")
-DEBUG = False
 
 
 # 依据HE图片的实际大小进行缩放比例计算
@@ -44,14 +46,17 @@ def gen_std_board_loc(zoom_scale):
     return std_kp_loc, (std_w, std_h)
 
 
-def gen_std_board_img(width, height, std_kp_loc=None, save_dir=None):
+def gen_std_board_img(width, height, std_kp_loc=None, save_dir=None, base_img=None, mask_color=(255, 255, 255)):
     zoom_scale = cal_zoom_rate(width, height)
     img_width = 1000
     std_w = 1.0 * img_width / 46 / 31 * zoom_scale
     std_h = std_w * np.sqrt(3) / 2
 
     radius = round(std_w * 0.618 / 2) if round(std_w * 0.618 / 2) > 1 else 1
-    std_board = np.zeros((height, width), dtype=np.uint8)
+    if base_img is None:
+        std_board = np.zeros((height, width, 3), dtype=np.uint8)
+    else:
+        std_board = base_img
     for h in range(46 * 36):
         for w in range(46 * 31):
             if h % 36 == 0 or w % 31 == 0:
@@ -60,14 +65,14 @@ def gen_std_board_img(width, height, std_kp_loc=None, save_dir=None):
             tmp_h = h * std_h
             if h % 2 == 0:  # 偶数行，w位置减去1/2
                 tmp_w = tmp_w - std_w * 0.5
-            cv2.circle(std_board, (round(tmp_w), round(tmp_h)), radius, 255, -1)
+            cv2.circle(std_board, (round(tmp_w), round(tmp_h)), radius, mask_color, -1)
 
     if std_kp_loc is not None:
         # 画一个标准点位参考图
         for x in range(45):
             for y in range(45):
                 cv2.circle(std_board, tuple(map(int, std_kp_loc[x, y])), 11, 255, -1)
-        if DEBUG:
+        if conf.DEBUG:
             cv2.imwrite(os.path.join(save_dir, "std_kp_img.tif"), std_board)
 
     return std_board
@@ -109,9 +114,9 @@ def detect_kp(img):
             # 截取图像外扩0.05*distance，避免边缘识别效果不好
             distance_add = int(min(distance_h, distance_w) * 0.05)
             part_img = img[max(0, start_h - distance_add): start_h + int(distance_h * 1.05),
-                       max(0, start_w - distance_add): start_w + int(distance_w * 1.05), :]
+                           max(0, start_w - distance_add): start_w + int(distance_w * 1.05), :]
 
-            out_img, centers = detector.detect(part_img, 0.7)
+            out_img, centers = detector.detect(part_img, conf.kp_detect_confidence)
             for center in centers:
                 center[:2] = center[:2] + np.asarray((max(0, start_w - distance_add), max(0, start_h - distance_add)))
             # 过滤掉边缘的识别点，避免重复
@@ -132,7 +137,7 @@ def filter_kp(k_p_loc, judge_range, img, save_dir="./"):
     # 绘制关键点的重合区域，以此作为众数过滤偏移过大的错误点
     label = np.zeros(img.shape[:2], dtype=np.uint8)
     for kp in k_p_loc:
-        x, y, conf = kp
+        x, y, tmp_conf = kp
         if not (judge_range * 2 < x < img.shape[1] - judge_range * 2 and
                 judge_range * 2 < y < img.shape[0] - judge_range * 2):
             continue  # skip edge point
@@ -141,7 +146,7 @@ def filter_kp(k_p_loc, judge_range, img, save_dir="./"):
         label[y - kp_range: y + kp_range, :] += 255 // 46 // 2
         # cv2.line(label, (x, 0), (x, img.shape[0]), (255//46), judge_range)
         # cv2.line(label, (0, y), (img.shape[1], y), (255//46), judge_range)
-    if DEBUG:
+    if conf.DEBUG:
         cv2.imwrite(os.path.join(save_dir, "./label.tif"), label)
     print("End draw label")
 
@@ -164,7 +169,7 @@ def filter_kp(k_p_loc, judge_range, img, save_dir="./"):
                         thickness=2)
 
     print("End draw img")
-    if DEBUG:
+    if conf.DEBUG:
         cv2.imwrite(os.path.join(save_dir, "./kp_filter.tif"), img)
     return kp_final, wrong_kp, kp_loc_confidence
 
@@ -223,11 +228,11 @@ def kp_auto_complete(real_kp_loc):
                     x_loc = real_kp_loc_plus[x + 1, y][0] - x_spacing
                     y_loc = real_kp_loc_plus[x + 1, y][1]
 
-                real_kp_loc_plus[x, y] = [x_loc, y_loc, 0.5]
+                real_kp_loc_plus[x, y] = [x_loc, y_loc, 0]
     return real_kp_loc_plus
 
 
-def draw_kp_in_img(img, real_kp_loc_plus, save_dir=None):
+def draw_kp_in_img(img, real_kp_loc_plus, save_dir=None, save_name="test_plus.tif"):
     # 画图验证点位的准确性
     for y in range(45):
         for x in range(45):
@@ -235,9 +240,28 @@ def draw_kp_in_img(img, real_kp_loc_plus, save_dir=None):
             cv2.circle(img, (int(kp[0]), int(kp[1])), 10, (0, 0, 0), 3)
             cv2.putText(img, "({},{})".format(int(x), int(y)), (int(kp[0]), int(kp[1]) + 20), 0, 1, (0, 255, 0),
                         thickness=2)
-    if DEBUG:
-        cv2.imwrite(os.path.join(save_dir, "./test_plus.tif"), img)
+    if conf.DEBUG:
+        cv2.imwrite(os.path.join(save_dir, "./{}".format(save_name)), img)
     return img
+
+
+def find_homography(real_kp_loc_plus, std_kp_loc):
+    if conf.use_real_kp_only:
+        # 只保留识别准确的点进行单应计算
+        real_kp = []
+        std_kp = []
+        for y in range(45):
+            for x in range(45):
+                x_loc, y_loc, tmp_conf = real_kp_loc_plus[x, y]
+                std_x, std_y = std_kp_loc[x, y]
+                if tmp_conf > conf.kp_detect_confidence:
+                    real_kp.append([x_loc, y_loc])
+                    std_kp.append([std_x, std_y])
+
+        h, status = cv2.findHomography(np.asarray(real_kp), np.asarray(std_kp), 0)
+    else:
+        h, status = cv2.findHomography(real_kp_loc_plus.reshape(-1, 3)[:, :2], std_kp_loc.reshape(-1, 2), 0)
+    return h
 
 
 def correct_whole_img(img_path):
@@ -247,12 +271,19 @@ def correct_whole_img(img_path):
     if not os.path.exists(save_dir):
         os.mkdir(save_dir)
 
-    img = cv2.imread(img_path)
-    if img.shape[0] > 10000:
-        zoom_rate = img.shape[0] / 10000
-        new_size = (np.asarray(img.shape[:2]) / zoom_rate).astype(dtype=int)
+    img = tifffile.imread(img_path)
+    if img.shape[0] > conf.out_size:
+        out_rate = img.shape[0] / conf.out_size
+        new_size = (np.asarray(img.shape[:2]) / out_rate).astype(dtype=int)
         img = cv2.resize(img, new_size[::-1])
     img_dist = img.copy()
+
+    zoom_rate = 1
+    if img.shape[0] > conf.calculate_size:
+        zoom_rate = img.shape[0] / conf.calculate_size
+        new_size = (np.asarray(img.shape[:2]) / zoom_rate).astype(dtype=int)
+        img = cv2.resize(img, new_size[::-1])
+    # img_dist = img.copy()
     # 判断常数，以一个块的宽度0.3为标准
     judge_range = int(min(img.shape[:2]) / 46 * 0.3)
     # 识别关键点
@@ -261,34 +292,48 @@ def correct_whole_img(img_path):
     kp_final, wrong_kp, kp_loc_confidence = filter_kp(k_p_loc, judge_range, img, save_dir)
     # 关键点序列化，把所有关键点对应到（45， 45）的位置上
     real_kp_loc = kp_serialize(kp_final, kp_loc_confidence, judge_range)
+    if conf.DEBUG:
+        draw_kp_in_img(img, real_kp_loc, save_dir, save_name="tmp1.tif")  # 画一下修正后的kp位置
     # 补全缺失关键点
     real_kp_loc_plus = kp_auto_complete(real_kp_loc)
 
+    real_kp_loc_plus = real_kp_loc_plus * zoom_rate  # 变换为实际位置
     print("Calculate Homography")
     # 画标准点图
-    zoom_scale = cal_zoom_rate(img.shape[1], img.shape[0])
+    zoom_scale = cal_zoom_rate(img_dist.shape[1], img_dist.shape[0])
     std_kp_loc, std_w_h = gen_std_board_loc(zoom_scale)
     # 计算单应性矩阵, 对kp做std_w_h/2的位置修正，方向为左下
-    real_kp_loc_plus[:, :, :2] = real_kp_loc_plus[:, :, :2] + [-std_w_h[0]*0.4, std_w_h[0]*0.3]
-    draw_kp_in_img(img, real_kp_loc_plus, save_dir)  # 画一下修正后的kp位置
+    real_kp_loc_plus[:, :, :2] = real_kp_loc_plus[:, :, :2] + [std_w_h[0]*conf.shift_x, std_w_h[0]*conf.shift_y]
 
     # 变换图像
-    h, status = cv2.findHomography(real_kp_loc_plus.reshape(-1, 3)[:, :2], std_kp_loc.reshape(-1, 2), 0)
-    img_dist = cv2.warpPerspective(img_dist, h, img.shape[:2][::-1],
-                                   borderMode=cv2.BORDER_CONSTANT, borderValue=(255, 255, 255))
-    cv2.imwrite(os.path.join(save_dir, "img_dist.tif"), img_dist)
+    h = find_homography(real_kp_loc_plus, std_kp_loc)
+    # # 画一个标准点位图，用作参考
+    # test_dst = cv2.warpPerspective(img, h, img.shape[:2][::-1],
+    #                                borderMode=cv2.BORDER_CONSTANT, borderValue=(255, 255, 255))
+    # std_board_img = gen_std_board_img(img.shape[1], img.shape[0], std_kp_loc, save_dir, base_img=test_dst)
+    # std_board_img = cv2.cvtColor(std_board_img, cv2.COLOR_GRAY2BGR)
+    # cv2.imwrite(os.path.join(save_dir, "std_board.tif"), std_board_img)
+    # test_dst = (test_dst * 0.85 + std_board_img * 0.15).astype(dtype=np.uint8)  # 叠加
+    # cv2.imwrite(os.path.join(save_dir, "tmp.tif"), test_dst)
 
-    test_dst = cv2.warpPerspective(img, h, img.shape[:2][::-1],
+    img_dist = cv2.warpPerspective(img_dist, h, img_dist.shape[:2][::-1],
                                    borderMode=cv2.BORDER_CONSTANT, borderValue=(255, 255, 255))
-    # 画一个标准点位图，用作参考
-    std_board_img = gen_std_board_img(img.shape[1], img.shape[0], std_kp_loc, save_dir)
-    std_board_img = cv2.cvtColor(std_board_img, cv2.COLOR_GRAY2BGR)
-    cv2.imwrite(os.path.join(save_dir, "std_board.tif"), std_board_img)
-    test_dst = (test_dst * 0.85 + std_board_img * 0.15).astype(dtype=np.uint8)  # 叠加
-    cv2.imwrite(os.path.join(save_dir, "tmp.tif"), test_dst)
+    tifffile.imwrite(os.path.join(save_dir, "img_dist.tif"), img_dist, compression=conf.compression_mode)
+
+    # 画标准点图
+    draw_kp_in_img(img_dist, real_kp_loc_plus, save_dir)  # 画一下修正后的kp位置
+    zoom_scale = cal_zoom_rate(img_dist.shape[1], img_dist.shape[0])
+    std_kp_loc, std_w_h = gen_std_board_loc(zoom_scale)
+    img_dist_with_board = gen_std_board_img(img_dist.shape[1], img_dist.shape[0], std_kp_loc, save_dir,
+                                            base_img=img_dist, mask_color=conf.std_mask_color)
+    tifffile.imwrite(os.path.join(save_dir, "img_dist_with_board.tif"), img_dist_with_board,
+                     compression=conf.compression_mode)
+
+
 
 
 if __name__ == '__main__':
-    img_path = r"E:\0920-1#--6um-202283-BG27BN04F4-A3__1#.tif"
+    img_path = r"E:\bmk-stitch-test\tmp\20220922-BI01BN12F5-A4-PZ-X2-40x-Img\level-2-chip.tif"
     correct_whole_img(img_path)
+
 

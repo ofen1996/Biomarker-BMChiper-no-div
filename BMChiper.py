@@ -10,14 +10,15 @@ import matplotlib.pyplot as plt
 from PyQt5 import QtWidgets
 import os
 from PyQt5.Qt import *
-import tifffile
 from need.ChipRegion import Ui_MainWindow
 # from MRXSBase import MRXSBase
 from need.ChipRegionWidget import ChipRegionWidget
 from need.FileDirBase import FileDirBase
-from need.stitch_pic import StitchImg
+from stitch_pic import StitchImg
 
 from need.CorrectWholeImg import correct_whole_img
+
+from need.config import conf
 
 
 
@@ -40,7 +41,11 @@ def img_show(name, img):
 class ChipRegionMain(QMainWindow, Ui_MainWindow):
     def __init__(self, parent=None):
         super(ChipRegionMain, self).__init__(parent)
-        self.cwd = os.getcwd()  # 获取当前程序文件位置
+        # self.cwd = os.getcwd()  # 获取当前程序文件位置
+        if os.path.exists(conf.conf.get("default", "base_dir")):
+            self.cwd = conf.conf.get("default", "base_dir")
+        else:
+            self.cwd = None
 
         # 初始化图形界面
         self.setupUi(self)
@@ -62,7 +67,7 @@ class ChipRegionMain(QMainWindow, Ui_MainWindow):
         self.gridLayout_main.addWidget(self.widget_right, 0, 1, 1, 1)
         self.widget_right.setStyleSheet('#widget_right{background-color:#FF0000;}')
 
-        self.setWindowTitle('BMChiper V1.0')
+        self.setWindowTitle('BMChiper V2.1')
         self.setWindowIcon(QIcon('../bmk_logo.png'))  # 设置窗体标题图标
 
         # 设置放大
@@ -86,13 +91,17 @@ class ChipRegionMain(QMainWindow, Ui_MainWindow):
         if filename_choose is None:
             return
         if filename_choose.endswith(".mrxs"):
-            self.comboBox_camera_type.setEnabled(True)
             self.stitch_chip.setEnabled(True)
         else:
-            self.comboBox_camera_type.setEnabled(False)
             self.stitch_chip.setEnabled(False)
         self.widget_right.read_image(filename_choose)
 
+        # 记忆选择的路径
+        base_dir = os.path.split(filename_choose)[0]
+        conf.reload()
+        conf.conf.set("default", "base_dir", base_dir)
+        with open(conf.ini_path, 'w') as f:
+            conf.conf.write(f)
         pass
     # 采集芯片区域的4个点
     # pos, 0: left_top, 1: right_top, 2: right_bottom, 3: left_bottom
@@ -124,15 +133,16 @@ class ChipRegionMain(QMainWindow, Ui_MainWindow):
 
     # 缝合并裁剪图像
     def stitch_chip_cao(self):
+        conf.reload()  # 重新读取配置文件，以支持热修改
         if [-1, -1] in self.widget_right.draw_argvs['rect_points']:
             print("请先选择4个点")
             return
         try:
             corners = np.asarray(self.widget_right.draw_argvs['rect_points'])
-            camera_resolutions = [(2448, 2048), (2048, 2048)]
-            camera_resolution = camera_resolutions[self.comboBox_camera_type.currentIndex()]
-            print("camera_resolution:" + str(camera_resolution))
-            st_img = StitchImg(self.widget_right.image_filename, corners * 4, camera_resolution)
+            # camera_resolutions = [(2448, 2048), (2048, 2048)]
+            # camera_resolution = camera_resolutions[self.comboBox_camera_type.currentIndex()]
+            # print("camera_resolution:" + str(camera_resolution))
+            st_img = StitchImg(self.widget_right.image_filename, corners * 4)
             new_corners, level_2_path = st_img.cut_and_stitch()
 
             # level_2_path = "./test.tif"
@@ -149,6 +159,7 @@ class ChipRegionMain(QMainWindow, Ui_MainWindow):
 
     def correct_whole_cao(self):
         print("Start correct whole img")
+        conf.reload()  # 重新读取配置文件，以支持热修改
         if self.widget_right.image_filename is not None:
             try:
                 correct_whole_img(self.widget_right.image_filename)
