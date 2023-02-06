@@ -152,7 +152,7 @@ def filter_kp(k_p_loc, judge_range, img, save_dir="./"):
 
     # 根据label筛选可信区域，过滤k_p
     label_nom = label / label.max()  # 归一化
-    kp_loc_confidence = np.where(label_nom > 0.55, 1.0, 0)  # 置信区域
+    kp_loc_confidence = np.where(label_nom > conf.kp_loc_confidence, 1.0, 0)  # 置信区域
     kp_loc_confidence = cv2.dilate(kp_loc_confidence, kernel=np.ones(shape=[3, 3]))
     kp_loc_confidence = cv2.erode(kp_loc_confidence, kernel=np.ones(shape=[3, 3]))
     wrong_kp = []

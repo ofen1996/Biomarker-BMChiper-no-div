@@ -10,6 +10,7 @@ class Config:
         self.DEBUG = None
         self.use_real_kp_only = None
         self.kp_detect_confidence = None
+        self.kp_loc_confidence = None
         self.shift_y = None
         self.shift_x = None
         self.compression_mode = None
@@ -42,6 +43,7 @@ class Config:
         self.shift_y = float(self.conf.get("correct-whole-img", "shift_y"))
         self.use_real_kp_only = eval(self.conf.get("correct-whole-img", "use_real_kp_only"))
         self.kp_detect_confidence = float(self.conf.get("correct-whole-img", "kp_detect_confidence"))
+        self.kp_loc_confidence = float(self.conf.get("correct-whole-img", "kp_loc_confidence"))
         self.DEBUG = eval(self.conf.get("correct-whole-img", "DEBUG"))
 
         self.overlap_x = int(self.conf.get("stitch", "overlap_x"))
