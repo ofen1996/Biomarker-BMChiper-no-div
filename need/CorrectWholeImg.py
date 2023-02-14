@@ -98,7 +98,16 @@ def locate_split(div_sum):
                     tmp_end = j
                     break
             split.append([tmp_start, tmp_end])
-    return split
+
+    # 为了防止某行为空，导致序号跳变，需要根据梯度中位数重新序列化
+    new_split = [[0, 0] for x in range(45)]
+    distance = np.median(np.gradient(list(map(np.mean, split))))
+    for sub_range in split:
+        mean_sub_range = np.mean(sub_range)
+        index = round(mean_sub_range / distance) - 1
+        new_split[index] = sub_range
+
+    return new_split
 
 
 def detect_kp(img):
@@ -333,7 +342,7 @@ def correct_whole_img(img_path):
 
 
 if __name__ == '__main__':
-    img_path = r"E:\bmk-stitch-test\tmp\20220922-BI01BN12F5-A4-PZ-X2-40x-Img\level-2-chip.tif"
+    img_path = r"E:\bmk-stitch-test\1216\20230206-20220914-BI01BN08F6-A3-SSU-F-F-3-15um-GE-40X-2-Img\level-2-chip.tif"
     correct_whole_img(img_path)
 
 
