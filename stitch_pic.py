@@ -101,6 +101,7 @@ def match_pic_row(img_before, img):
     # img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     img_before_gray = img_before
     img_gray = img
+    # show_img(img_gray)
 
     template_part = img_before_gray[:img_before_gray.shape[0], -int(conf.overlap_x + conf.x_range):]
     match_part = img_gray[int(conf.x_range * 0.7): -int(conf.x_range * 0.7), :int(conf.overlap_x - conf.x_range)]
@@ -139,7 +140,7 @@ def match_pic_column(img_before, img):
     return [img_before_gray.shape[0] + new_shift_y_x[0], new_shift_y_x[1]], min_max_loc[0]
 
 
-def stitch_from_pic(pic_dir, fov_shape, save_dir, start_pic_index=(0, 0)):
+def stitch_from_pic(pic_dir, fov_shape, save_dir, start_pic_index=(0, 0), stitch_channel=None):
     end_pic_index = [fov_shape[0] - 1, fov_shape[1] - 1]
     tmp = cv2.imread(os.path.join(pic_dir, "ori_{}_{}.tif".format(start_pic_index[0],
                                                                   start_pic_index[1])))
@@ -173,7 +174,10 @@ def stitch_from_pic(pic_dir, fov_shape, save_dir, start_pic_index=(0, 0)):
                 pic_path_before = os.path.join(pic_dir, pic_name_before)
                 img_before = cv2.imread(pic_path_before)
                 # 计算与上一张图的位置偏移
-                shift_h_w, _ = match_pic_column(img_before, img)
+                if stitch_channel not in [None, 3]:
+                    shift_h_w, _ = match_pic_column(img_before[..., stitch_channel], img[..., stitch_channel])
+                else:
+                    shift_h_w, _ = match_pic_column(img_before, img)
                 start_loc_before = all_loc[pic_name_before]
                 start_loc = [start_loc_before[0] + shift_h_w[0], start_loc_before[1] + shift_h_w[1]]
                 pass
@@ -183,7 +187,10 @@ def stitch_from_pic(pic_dir, fov_shape, save_dir, start_pic_index=(0, 0)):
                 pic_path_before = os.path.join(pic_dir, pic_name_before)
                 img_before = cv2.imread(pic_path_before)
                 # 计算与前一张图的位置偏移
-                shift_h_w, _ = match_pic_row(img_before, img)
+                if stitch_channel not in [None, 3]:
+                    shift_h_w, _ = match_pic_row(img_before[..., stitch_channel], img[..., stitch_channel])
+                else:
+                    shift_h_w, _ = match_pic_row(img_before, img)
                 start_loc_before = all_loc[pic_name_before]
                 start_loc = [start_loc_before[0] + shift_h_w[0], start_loc_before[1] + shift_h_w[1]]
                 pass
@@ -193,7 +200,10 @@ def stitch_from_pic(pic_dir, fov_shape, save_dir, start_pic_index=(0, 0)):
                 pic_path_before = os.path.join(pic_dir, pic_name_before)
                 img_before = cv2.imread(pic_path_before)
                 # 计算与上一张图的位置偏移
-                shift_h_w, match_point_col = match_pic_column(img_before, img)
+                if stitch_channel not in [None, 3]:
+                    shift_h_w, match_point_col = match_pic_column(img_before[..., stitch_channel], img[..., stitch_channel])
+                else:
+                    shift_h_w, match_point_col = match_pic_column(img_before, img)
                 start_loc_before = all_loc[pic_name_before]
                 start_loc_1 = [start_loc_before[0] + shift_h_w[0], start_loc_before[1] + shift_h_w[1]]
 
@@ -202,14 +212,21 @@ def stitch_from_pic(pic_dir, fov_shape, save_dir, start_pic_index=(0, 0)):
                 pic_path_before = os.path.join(pic_dir, pic_name_before)
                 img_before = cv2.imread(pic_path_before)
                 # 计算与前一张图的位置偏移
-                shift_h_w, match_point_row = match_pic_row(img_before, img)
+                if stitch_channel not in [None, 3]:
+                    shift_h_w, match_point_row = match_pic_row(img_before[..., stitch_channel], img[..., stitch_channel])
+                else:
+                    shift_h_w, match_point_row = match_pic_row(img_before, img)
                 start_loc_before = all_loc[pic_name_before]
                 start_loc_2 = [start_loc_before[0] + shift_h_w[0], start_loc_before[1] + shift_h_w[1]]
 
                 start_loc = [(start_loc_1[0] + start_loc_2[0]) // 2, (start_loc_1[1] + start_loc_2[1]) // 2]
                 pass
 
-            whole_img[start_loc[0]: start_loc[0] + img.shape[0], start_loc[1]: start_loc[1] + img.shape[1]] = img
+            if stitch_channel not in [None, 3]:
+                whole_img[start_loc[0]: start_loc[0] + img.shape[0], start_loc[1]: start_loc[1] + img.shape[1], ...] =\
+                    cv2.cvtColor(img[..., stitch_channel], cv2.COLOR_GRAY2BGR)
+            else:
+                whole_img[start_loc[0]: start_loc[0] + img.shape[0], start_loc[1]: start_loc[1] + img.shape[1]] = img
             all_loc[pic_name] = start_loc
             print(pic_name, "finished, start loc:{}".format(start_loc))
 
@@ -239,7 +256,7 @@ def stitch_from_pic(pic_dir, fov_shape, save_dir, start_pic_index=(0, 0)):
 
 
 class StitchImg:
-    def __init__(self, mrxs_path, ori_corners=None):
+    def __init__(self, mrxs_path, ori_corners=None, channel_stitch=None):
         # mrxs_path = r"E:\biomarker_data\no_div_HE\20220927-BG27BN04F6-A4-YQ-XZ-GE-40X-bfh-20220927-134559279.mrxs"
         # pic_dir = r"E:\biomarker_data\no_div_HE\20220927-BG27BN04F6-A4-YQ-XZ-GE-40X-bfh-20220927-134559279_cycle"
         self.camera_resolution = conf.camera_resolution
@@ -255,6 +272,9 @@ class StitchImg:
         self.end_pic_index = [-1, -1]
         # end_pic_index = [fov_shape[0] - 1, fov_shape[1] - 1]
         # end_pic_index = [28, 22]
+        self.channel_stitch = 0  # 0 RGB, 1 B, 2 G, 3 R
+        if channel_stitch is not None and channel_stitch in [0, 1, 2, 3]:
+            self.channel_stitch = 3 - channel_stitch
 
     def cut_and_stitch(self):
         print("Start cut pic")
@@ -277,7 +297,7 @@ class StitchImg:
         print("First stitch pic is {}, {}".format(self.corners[0][0], self.start_pic_index))
 
         small_img, all_loc = stitch_from_pic(self.pic_dir, fov_shape, self.img_path,
-                                             start_pic_index=self.start_pic_index)
+                                             start_pic_index=self.start_pic_index, stitch_channel=self.channel_stitch)
 
         # 找到新的角点，进行映射变换
         new_corners = []

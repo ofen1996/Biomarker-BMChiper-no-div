@@ -18,6 +18,7 @@ class ChipRegionWidget(QWidget):
         super(ChipRegionWidget, self).__init__(parent)
 
         # init参数设置
+        self.channel_show = 0
         self.init_parameters()
 
         # init工作模式
@@ -30,7 +31,6 @@ class ChipRegionWidget(QWidget):
         self.image_filename = None
 
         # self.corr_spots = CorrSpotsData()
-        pass
 
     def init_parameters(self):
         self.draw_argvs = {}
@@ -58,7 +58,7 @@ class ChipRegionWidget(QWidget):
         self.draw_argvs['cross_line_len'] = 50
         # 设置实时准心，只有mode1时显示
         self.draw_argvs['curr_mouse'] = [0, 0]
-
+        self.channel_show = 0
 
         pass
 
@@ -177,6 +177,10 @@ class ChipRegionWidget(QWidget):
         show_rect = [0, 0, win_w_h[0], win_w_h[1]]
         # 绘制当前图片
         img_crop = img.crop(crop_rect)
+        if self.channel_show != 0:
+            img_crop = np.asarray(img_crop)
+            img_crop = img_crop[..., self.channel_show - 1]
+            img_crop = Image.fromarray(img_crop)
         qt_image = ImageQt.ImageQt(img_crop)
         rect = QRect(show_rect[0],show_rect[1],show_rect[2],show_rect[3])
         qp.drawImage(rect, qt_image)

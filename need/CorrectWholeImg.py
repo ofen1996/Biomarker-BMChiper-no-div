@@ -311,6 +311,8 @@ def correct_whole_img(img_path):
     # 画标准点图
     zoom_scale = cal_zoom_rate(img_dist.shape[1], img_dist.shape[0])
     std_kp_loc, std_w_h = gen_std_board_loc(zoom_scale)
+    if conf.DEBUG:
+        draw_kp_in_img(img_dist.copy(), std_kp_loc, save_dir, save_name="tmp2.tif")  # 画一下修正后的kp位置
     # 计算单应性矩阵, 对kp做std_w_h/2的位置修正，方向为左下
     real_kp_loc_plus[:, :, :2] = real_kp_loc_plus[:, :, :2] + [std_w_h[0]*conf.shift_x, std_w_h[0]*conf.shift_y]
 
@@ -342,7 +344,7 @@ def correct_whole_img(img_path):
 
 
 if __name__ == '__main__':
-    img_path = r"E:\bmk-stitch-test\1216\20230206-20220914-BI01BN08F6-A3-SSU-F-F-3-15um-GE-40X-2-Img\level-2-chip.tif"
+    img_path = r"E:\bmk-stitch-test\2fen-img\20230223DEMO-ssdna-BJ27BN06F5-B2-Img\level-2-chip.tif"
     correct_whole_img(img_path)
 
 

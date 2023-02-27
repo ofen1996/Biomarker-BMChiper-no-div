@@ -2,6 +2,7 @@ import sys
 import traceback
 
 import numpy as np
+import tifffile
 from PIL import Image
 Image.MAX_IMAGE_PIXELS = 3000000000
 import cv2
@@ -142,7 +143,7 @@ class ChipRegionMain(QMainWindow, Ui_MainWindow):
             # camera_resolutions = [(2448, 2048), (2048, 2048)]
             # camera_resolution = camera_resolutions[self.comboBox_camera_type.currentIndex()]
             # print("camera_resolution:" + str(camera_resolution))
-            st_img = StitchImg(self.widget_right.image_filename, corners * 4)
+            st_img = StitchImg(self.widget_right.image_filename, corners * 4, self.widget_right.channel_show)
             new_corners, level_2_path = st_img.cut_and_stitch()
 
             # level_2_path = "./test.tif"
@@ -197,6 +198,17 @@ class ChipRegionMain(QMainWindow, Ui_MainWindow):
         # self.autop = AutoControl(self.project_obj, run_step=1)
         # self.autop.start()
         pass
+
+    def choose_channel_show_cao(self):
+        pass
+        print(self.comboBox.currentIndex())
+        self.widget_right.channel_show = self.comboBox.currentIndex()
+
+    def stitch_manual_cao(self):
+        pass
+        print(112)
+        im = cv2.imread(r"E:\bmk-stitch-test\2fen-img\20230223DEMO-ssdna-BJ27BN06F5-B2-Cut\ori_3_5.tif")
+        self.widget_right.read_image(level_2_path)
 
 
 
