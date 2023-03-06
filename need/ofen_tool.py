@@ -173,3 +173,11 @@ def my_conv2d(img, conv_mask, start_loc=(0, 0), end_loc=None,
                 #     result[j, i] -= 3*negative_result
     return result
 
+
+def gamma_trans(img, gamma):
+    # 具体做法是先归一化到1，然后gamma作为指数值求出新的像素值再还原
+    gamma_table = [np.power(x / 255.0, gamma) * 255.0 for x in range(256)]
+    gamma_table = np.round(np.array(gamma_table)).astype(np.uint8)
+
+    # 实现这个映射用的是OpenCV的查表函数
+    return cv2.LUT(img, gamma_table)

@@ -8,6 +8,8 @@ Image.MAX_IMAGE_PIXELS = 3000000000
 import cv2
 import matplotlib.pyplot as plt
 
+import match_imgs
+
 from PyQt5 import QtWidgets
 import os
 from PyQt5.Qt import *
@@ -93,8 +95,10 @@ class ChipRegionMain(QMainWindow, Ui_MainWindow):
             return
         if filename_choose.endswith(".mrxs"):
             self.stitch_chip.setEnabled(True)
+            self.new_stitch_channel.setEnabled(True)
         else:
             self.stitch_chip.setEnabled(False)
+            self.new_stitch_channel.setEnabled(False)
         self.widget_right.read_image(filename_choose)
 
         # 记忆选择的路径
@@ -204,11 +208,33 @@ class ChipRegionMain(QMainWindow, Ui_MainWindow):
         print(self.comboBox.currentIndex())
         self.widget_right.channel_show = self.comboBox.currentIndex()
 
-    def stitch_manual_cao(self):
+    def new_stitch_channel_cao(self):
+        conf.reload()  # 重新读取配置文件，以支持热修改
+        if [-1, -1] in self.widget_right.draw_argvs['rect_points']:
+            print("请先选择4个点")
+            return
+        try:
+            corners = np.asarray(self.widget_right.draw_argvs['rect_points']) * 4
+            print(corners)
+
+            stitch_path = match_imgs.cut_and_stitch(self.widget_right.image_filename, corners)
+            # camera_resolutions = [(2448, 2048), (2048, 2048)]
+            # camera_resolution = camera_resolutions[self.comboBox_camera_type.currentIndex()]
+            # print("camera_resolution:" + str(camera_resolution))
+            # st_img = StitchImg(self.widget_right.image_filename, corners * 4, self.widget_right.channel_show)
+            # new_corners, level_2_path = st_img.cut_and_stitch()
+
+            # level_2_path = "./test.tif"
+            # tifffile.imwrite(level_2_path, np.asarray(self.widget_right.draw_argvs['zoom_imgs'][-1])[:, :, :3], compression="jpeg")
+
+            self.widget_right.image_filename = stitch_path
+            self.widget_right.read_image(stitch_path)
+        except Exception as e:
+            print(traceback.format_exc(), e)
+            raise
+            return
+
         pass
-        print(112)
-        im = cv2.imread(r"E:\bmk-stitch-test\2fen-img\20230223DEMO-ssdna-BJ27BN06F5-B2-Cut\ori_3_5.tif")
-        self.widget_right.read_image(level_2_path)
 
 
 

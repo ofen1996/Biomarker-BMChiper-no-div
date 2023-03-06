@@ -31,7 +31,7 @@ class Ui_MainWindow(object):
         self.toolBox.setEnabled(True)
         self.toolBox.setObjectName("toolBox")
         self.page_file = QtWidgets.QWidget()
-        self.page_file.setGeometry(QtCore.QRect(0, 0, 379, 250))
+        self.page_file.setGeometry(QtCore.QRect(0, 0, 392, 288))
         self.page_file.setObjectName("page_file")
         self.verticalLayout_7 = QtWidgets.QVBoxLayout(self.page_file)
         self.verticalLayout_7.setContentsMargins(5, 0, 0, 0)
@@ -78,10 +78,10 @@ class Ui_MainWindow(object):
         self.stitch_chip.setEnabled(False)
         self.stitch_chip.setObjectName("stitch_chip")
         self.verticalLayout.addWidget(self.stitch_chip)
-        self.stitch_chip_2 = QtWidgets.QPushButton(self.widget_2)
-        self.stitch_chip_2.setEnabled(True)
-        self.stitch_chip_2.setObjectName("stitch_chip_2")
-        self.verticalLayout.addWidget(self.stitch_chip_2)
+        self.new_stitch_channel = QtWidgets.QPushButton(self.widget_2)
+        self.new_stitch_channel.setEnabled(False)
+        self.new_stitch_channel.setObjectName("new_stitch_channel")
+        self.verticalLayout.addWidget(self.new_stitch_channel)
         self.correct_whole = QtWidgets.QPushButton(self.widget_2)
         self.correct_whole.setObjectName("correct_whole")
         self.verticalLayout.addWidget(self.correct_whole)
@@ -138,7 +138,7 @@ class Ui_MainWindow(object):
         self.stitch_chip.clicked.connect(MainWindow.stitch_chip_cao) # type: ignore
         self.correct_whole.clicked.connect(MainWindow.correct_whole_cao) # type: ignore
         self.comboBox.currentIndexChanged['int'].connect(MainWindow.choose_channel_show_cao) # type: ignore
-        self.stitch_chip_2.clicked.connect(MainWindow.stitch_manual_cao) # type: ignore
+        self.new_stitch_channel.clicked.connect(MainWindow.new_stitch_channel_cao) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
@@ -156,7 +156,7 @@ class Ui_MainWindow(object):
         self.bnt_left_top.setText(_translate("MainWindow", "左上"))
         self.save_chip_rect.setText(_translate("MainWindow", "保存区域"))
         self.stitch_chip.setText(_translate("MainWindow", "缝合并裁剪"))
-        self.stitch_chip_2.setText(_translate("MainWindow", "缝合并裁剪(手动)"))
+        self.new_stitch_channel.setText(_translate("MainWindow", "带二分镜缝合"))
         self.correct_whole.setText(_translate("MainWindow", "全图校准(需先裁剪)"))
         self.toolBox.setItemText(self.toolBox.indexOf(self.page_file), _translate("MainWindow", "芯片区域手工识别"))
         self.auto_reg_chip_region.setText(_translate("MainWindow", "自动识别启动"))

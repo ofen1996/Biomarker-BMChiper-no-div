@@ -18,6 +18,10 @@ class Config:
         self.out_size = None
         self.calculate_size = None
 
+        self.std_edge_size = None
+        self.whole_img_size = None
+        self.stitch_channal = None
+
         self.overlap_x = None
         self.overlap_y = None
         self.x_range = None
@@ -45,6 +49,10 @@ class Config:
         self.kp_detect_confidence = float(self.conf.get("correct-whole-img", "kp_detect_confidence"))
         self.kp_loc_confidence = float(self.conf.get("correct-whole-img", "kp_loc_confidence"))
         self.DEBUG = eval(self.conf.get("correct-whole-img", "DEBUG"))
+
+        self.std_edge_size = eval(self.conf.get("match-imgs", "std_edge_size"))
+        self.whole_img_size = eval(self.conf.get("match-imgs", "whole_img_size"))
+        self.stitch_channal = int(self.conf.get("match-imgs", "stitch_channal"))
 
         self.overlap_x = int(self.conf.get("stitch", "overlap_x"))
         self.overlap_y = int(self.conf.get("stitch", "overlap_y"))
