@@ -282,9 +282,9 @@ def correct_whole_img(img_path):
 
     img = tifffile.imread(img_path)
     if img.shape[0] > conf.out_size:
-        out_rate = img.shape[0] / conf.out_size
-        new_size = (np.asarray(img.shape[:2]) / out_rate).astype(dtype=int)
-        img = cv2.resize(img, new_size[::-1])
+        # out_rate = img.shape[0] / conf.out_size
+        # new_size = (np.asarray(img.shape[:2]) / out_rate).astype(dtype=int)
+        img = cv2.resize(img, (int(conf.out_size * 0.99435), conf.out_size))  # 芯片标准宽度比高度有个比例
     img_dist = img.copy()
 
     zoom_rate = 1
@@ -344,7 +344,7 @@ def correct_whole_img(img_path):
 
 
 if __name__ == '__main__':
-    img_path = r"E:\bmk-stitch-test\2fen-img\20230223DEMO-ssdna-BJ27BN06F5-B2-Img\level-2-chip.tif"
+    img_path = r"E:\new_stitch_test\cell-seg\test-20X\HE\20230303-BG13BN01F5-B3-GW-FG-GE-40X-Img\level-2-chip.tif"
     correct_whole_img(img_path)
 
 

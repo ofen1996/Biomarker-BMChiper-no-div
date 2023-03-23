@@ -217,7 +217,7 @@ class ChipRegionMain(QMainWindow, Ui_MainWindow):
             corners = np.asarray(self.widget_right.draw_argvs['rect_points']) * 4
             print(corners)
 
-            stitch_path = match_imgs.cut_and_stitch(self.widget_right.image_filename, corners)
+            stitch_path = match_imgs.cut_and_stitch(self.widget_right.image_filename, corners.tolist())
             # camera_resolutions = [(2448, 2048), (2048, 2048)]
             # camera_resolution = camera_resolutions[self.comboBox_camera_type.currentIndex()]
             # print("camera_resolution:" + str(camera_resolution))
