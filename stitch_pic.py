@@ -335,10 +335,10 @@ class StitchImg:
 
 if __name__ == '__main__':
     pass
-    stitch_from_pic(r"E:\bmk-stitch-test\20230103-20x\BJ19BN02F5-B4",
-                    (14, 12),
-                    r"E:\bmk-stitch-test\20230103-20x\BJ19BN02F5-B4-img",
-                    start_pic_index=(0, 0))
+    # stitch_from_pic(r"E:\bmk-stitch-test\20230103-20x\BJ19BN02F5-B4",
+    #                 (14, 12),
+    #                 r"E:\bmk-stitch-test\20230103-20x\BJ19BN02F5-B4-img",
+    #                 start_pic_index=(0, 0))
     # stitch_from_pic(
     #     r"E:\LQGCS\20221128-BI29BN02F2-A4-GZ-LQG-20X-cut",
     #     (12, 13),
@@ -347,3 +347,5 @@ if __name__ == '__main__':
     # cut_fov_img(r"E:\biomarker_data\no_div_HE\20x-test\0920-20220803-BG27BN04F4-A3-1.mrxs",
     #             r"E:\biomarker_data\no_div_HE\20x-test\0920-20220803-BG27BN04F4-A3-1-Cut",
     #             camera_resolution=(2048, 2048))
+
+

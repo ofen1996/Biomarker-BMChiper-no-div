@@ -7,6 +7,8 @@ from need.ofen_tool import *
 from need.KpDetectByYolo import MyDetector
 from need.config import conf
 
+from sklearn.linear_model import LinearRegression
+
 detector = MyDetector("./model/best.onnx")
 std_edge_size = (2248, 2648)
 
@@ -263,19 +265,51 @@ def new_stitch(pics_dir, reg_box, pic_shape=(2048, 2448), save_dir=None):
                     "ori_{}_{}.tif".format(index_y, index_x), (200, 200), 0, 3, 255,
                     thickness=2)
 
-    # return stitch_json
+    # 添加stitch的自校正
+    save_json(os.path.join(save_dir, "stitch_json_ori.json"), stitch_json)
+    stitch_json = auto_correct_stitch_json(stitch_json)
     save_json(os.path.join(save_dir, "stitch_json.json"), stitch_json)
+    # return stitch_json
 
     print("start save {}".format(os.path.join(save_dir, r"new_stitch_img_mask.tif")))
     tifffile.imwrite(os.path.join(save_dir, "new_stitch_img_mask.tif"), std_circle.circles_mask[::4, ::4, ...],
                      compression="jpeg")
-    print("start save {}".format(os.path.join(save_dir, r"new_stitch_img.tif")))
-    tifffile.imwrite(os.path.join(save_dir, "new_stitch_img.tif"),
-                     stitch_img[std_circle.reg_box[0][1]:std_circle.reg_box[1][1],
-                                std_circle.reg_box[0][0]:std_circle.reg_box[1][0]],
-                     compression="jpeg")
+    # print("start save {}".format(os.path.join(save_dir, r"new_stitch_img.tif")))
+    # tifffile.imwrite(os.path.join(save_dir, "new_stitch_img.tif"),
+    #                  stitch_img[std_circle.reg_box[0][1]:std_circle.reg_box[1][1],
+    #                             std_circle.reg_box[0][0]:std_circle.reg_box[1][0]],
+    #                  compression="jpeg")
+
+    # 自校正后，根据新的json重新画图
+    draw_img_by_json(pics_dir, os.path.join(save_dir, "stitch_json.json"), save_dir)
 
     return os.path.join(save_dir, "new_stitch_img.tif")
+
+
+def auto_correct_stitch_json(stitch_json):
+    # 坐标采用双线性拟合的方法，过滤出错误值较大的数据，用拟合数据代替。达到自校正效果
+    # stitch_json = load_json(r"E:\Cell_seg_images\20230417-BK!6BN01F1-B3-SN-FG20-GE-20X-Cut-new_stitch\stitch_json.json")
+    [start_index_x, start_index_y], [end_index_x, end_index_y], = stitch_json["x_y_range"]
+
+    X = np.array([x for x in stitch_json["all_index_y_x"]])
+    Y = np.asarray([stitch_json[f"ori_{x[0]}_{x[1]}.tif"] for x in stitch_json["all_index_y_x"]])
+
+    model = LinearRegression()
+    model.fit(X, Y)
+
+    # 开始依次评估误差指数
+    for y_i, x_i in stitch_json["all_index_y_x"]:
+        pic_name = f"ori_{y_i}_{x_i}.tif"
+        real_loc = stitch_json[pic_name]
+        pred_loc = model.predict(np.array([[y_i, x_i]]))[0].astype(int).tolist()
+        error_num = abs(pred_loc[0] - real_loc[0]) + abs(pred_loc[1] - real_loc[1])
+
+        print(f"pic_name: {pic_name}    real_loc: {real_loc}    pred_loc: {pred_loc}    error: {error_num}")
+        if error_num > (conf.overlap_x + conf.overlap_y):
+            stitch_json[pic_name] = pred_loc
+            print(f"{pic_name} may be wrong, correct it to {pred_loc}")
+
+    return stitch_json
 
 
 def cut_and_stitch(mrxs_path, reg_box):
@@ -326,7 +360,7 @@ def draw_img_by_json(pics_dir, stitch_json_path, save_dir):
                      compression="jpeg")
 
 if __name__ == '__main__':
-
+    pass
     # pic_dir = r"E:\Cell_seg_images\20230404-BJ27BN08F6-B3-LGY-S-FG12-GE-20X-Cut"
     # reg_box = [[4396, 4064], [29784, 3976], [29832, 29456], [4440, 29548]]
     # pic_shape = (2048, 2448)
@@ -335,14 +369,3 @@ if __name__ == '__main__':
     #     os.mkdir(save_dir)
     # stitch_json = new_stitch(pic_dir, reg_box, pic_shape=pic_shape, save_dir=save_dir)
 
-    stitch_json = load_json(r"E:\Cell_seg_images\20230405-BJ27BN01F2-B2-BDPF-FG15-20X-2-Cut-new_stitch\stitch_json.json")
-    x_y_start, x_y_end = stitch_json['x_y_range']
-    X, Y = np.meshgrid(range(x_y_start[0], x_y_end[0] + 1), range(x_y_start[1], x_y_end[1] + 1))
-    loc_mat = []
-    for x, y in zip(X.flatten(), Y.flatten()):
-        name = "ori_{}_{}.tif".format(y, x)
-        if name in stitch_json:
-            loc_mat.append(stitch_json[name])
-        else:
-            loc_mat.append([-1, -1])
-    loc_mat = np.asarray(loc_mat).reshape(Y.shape[0], -1, 2)
