@@ -86,13 +86,13 @@ def locate_split(div_sum):
     for i, y_sum in enumerate(div_sum):
         if i < tmp_end:  # 双指针，i小于下降沿跳过
             continue
-        if y_sum >= 0.1 and tmp_end >= tmp_start:
+        if y_sum >= 0.2 and tmp_end >= tmp_start:
             # 上升沿
             # print("up", i)
             tmp_start = i
             tmp_end = tmp_start + 1
             for j in range(tmp_end, tmp_end + (len(div_sum) // 50)):
-                if div_sum[j] >= 0.1:
+                if div_sum[j] >= 0.2:
                     continue
                 else:
                     tmp_end = j
@@ -101,7 +101,7 @@ def locate_split(div_sum):
 
     # 为了防止某行为空，导致序号跳变，需要根据梯度中位数重新序列化
     new_split = [[0, 0] for x in range(45)]
-    distance = np.median(np.gradient(list(map(np.mean, split))))
+    distance = float(np.median(np.gradient(list(map(np.mean, split)))))
     for sub_range in split:
         mean_sub_range = np.mean(sub_range)
         index = round(mean_sub_range / distance) - 1
@@ -344,7 +344,7 @@ def correct_whole_img(img_path):
 
 
 if __name__ == '__main__':
-    img_path = r"E:\new_stitch_test\cell-seg\test-20X\HE\20230303-BG13BN01F5-B3-GW-FG-GE-40X-Img\level-2-chip.tif"
+    img_path = r"E:\Cell_seg_images\20230411-BI29BN16F6-A4-JZL-FG17-20X-Cut-new_stitch\new_stitch_img.tif"
     correct_whole_img(img_path)
 
 

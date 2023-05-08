@@ -149,7 +149,7 @@ def stitch_from_pic(pic_dir, fov_shape, save_dir, start_pic_index=(0, 0), stitch
     whole_size = (tmp.shape[0] * (end_pic_index[0] + 1 - start_pic_index[0]),
                   tmp.shape[1] * (end_pic_index[1] + 1 - start_pic_index[1]))
     print("whole size:{}".format(whole_size))
-    whole_img = np.zeros((whole_size[0] + 1000, whole_size[1] + 1000, 3), dtype=np.uint8)
+    whole_img = np.zeros((whole_size[0] + 2000, whole_size[1] + 2000, 3), dtype=np.uint8)
     first_loc = [500, 500]
     all_loc = {}
 
