@@ -291,8 +291,9 @@ def auto_correct_stitch_json(stitch_json):
     # stitch_json = load_json(r"E:\Cell_seg_images\20230417-BK!6BN01F1-B3-SN-FG20-GE-20X-Cut-new_stitch\stitch_json.json")
     [start_index_x, start_index_y], [end_index_x, end_index_y], = stitch_json["x_y_range"]
 
-    X = np.array([x for x in stitch_json["all_index_y_x"]])
-    Y = np.asarray([stitch_json[f"ori_{x[0]}_{x[1]}.tif"] for x in stitch_json["all_index_y_x"]])
+    X = np.array([x for x in stitch_json["all_index_y_x"] if f"ori_{x[0]}_{x[1]}.tif" in stitch_json])
+    Y = np.asarray([stitch_json[f"ori_{x[0]}_{x[1]}.tif"] for x in stitch_json["all_index_y_x"]
+                    if f"ori_{x[0]}_{x[1]}.tif" in stitch_json])
 
     model = LinearRegression()
     model.fit(X, Y)
@@ -300,7 +301,10 @@ def auto_correct_stitch_json(stitch_json):
     # 开始依次评估误差指数
     for y_i, x_i in stitch_json["all_index_y_x"]:
         pic_name = f"ori_{y_i}_{x_i}.tif"
-        real_loc = stitch_json[pic_name]
+        if pic_name not in stitch_json:
+            real_loc = [-1, -1]
+        else:
+            real_loc = stitch_json[pic_name]
         pred_loc = model.predict(np.array([[y_i, x_i]]))[0].astype(int).tolist()
         error_num = abs(pred_loc[0] - real_loc[0]) + abs(pred_loc[1] - real_loc[1])
 
