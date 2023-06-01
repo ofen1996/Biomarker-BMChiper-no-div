@@ -335,10 +335,10 @@ class StitchImg:
 
 if __name__ == '__main__':
     pass
-    # stitch_from_pic(r"E:\bmk-stitch-test\20230103-20x\BJ19BN02F5-B4",
-    #                 (14, 12),
-    #                 r"E:\bmk-stitch-test\20230103-20x\BJ19BN02F5-B4-img",
-    #                 start_pic_index=(0, 0))
+    stitch_from_pic(r"E:\test\imgs1147_31_37\img_dist",
+                    (36, 31),
+                    r"E:\test\imgs1147_31_37\img_dist_out",
+                    start_pic_index=(0, 0))
     # stitch_from_pic(
     #     r"E:\LQGCS\20221128-BI29BN02F2-A4-GZ-LQG-20X-cut",
     #     (12, 13),
