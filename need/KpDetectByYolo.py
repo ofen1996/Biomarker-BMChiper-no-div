@@ -182,6 +182,9 @@ class MyDetector:
     def detect(self, img, conf_thres=0.5):
         t = time.time()
         img = img.copy()
+########### 此段代码仅在零时使用，后续删除###############
+        img = cv2.merge([img[..., 2], img[..., 0], img[..., 1]])
+###############################################
         blob = cv2.dnn.blobFromImage(img, 1 / 255.0, self.input_shape, swapRB=True, crop=False)
         self.net.setInput(blob)
         pred = self.net.forward()

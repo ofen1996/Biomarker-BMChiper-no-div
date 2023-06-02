@@ -1,5 +1,6 @@
 import os.path
 
+import cv2
 import numpy as np
 import openslide
 import tifffile
@@ -11,6 +12,22 @@ from sklearn.linear_model import LinearRegression
 
 detector = MyDetector("./model/best.onnx")
 std_edge_size = (2248, 2648)
+
+
+# 融合2张图像，以a,b的比值作为系数，融合2张图
+def merge_two_img(a, b):
+    if a.shape != b.shape:
+        raise Exception(f"a, b shape is different{a.shape}, {b.shape}")
+    # RGB处理方法
+    if len(a.shape) == 3:
+        result = np.zeros_like(a)
+        for channel in range(a.shape[2]):
+            result[:, :, channel] = merge_two_img(a[:, :, channel], b[:, :, channel])
+        return result
+
+    # gray 图像
+    mask = cv2.blur(a, (11, 11)) > cv2.blur(b, (11, 11))
+    return np.where(mask, a, b)
 
 
 def cut_fov_img(mrxs_path, save_path, camera_resolution=(2448, 2048)):
@@ -211,7 +228,8 @@ def new_stitch(pics_dir, reg_box, pic_shape=(2048, 2448), save_dir=None):
         index_y, index_x = index_y_x
 
         img_ori = cv2.imread(os.path.join(pics_dir, "ori_{}_{}.tif".format(index_y, index_x)))
-        img = cv2.warpPerspective(img_ori, M, img_ori.shape[:2][::-1], borderMode=cv2.BORDER_REFLECT_101)
+        # img = cv2.warpPerspective(img_ori, M, img_ori.shape[:2][::-1], borderMode=cv2.BORDER_REFLECT_101)
+        img = cv2.warpPerspective(img_ori, M, img_ori.shape[:2][::-1])
         # img = img_ori.copy()
         out_img, centers = detector.detect(img, 0.4)
 
@@ -345,16 +363,23 @@ def draw_img_by_json(pics_dir, stitch_json_path, save_dir):
         print("ori_{}_{}.tif : {}".format(index_y, index_x, real_loc))
 
         img_ori = cv2.imread(os.path.join(pics_dir, "ori_{}_{}.tif".format(index_y, index_x)))
-        img = cv2.warpPerspective(img_ori, np.asarray(M), img_ori.shape[:2][::-1], borderMode=cv2.BORDER_REFLECT_101)
-
+        # img = cv2.warpPerspective(img_ori, np.asarray(M), img_ori.shape[:2][::-1], borderMode=cv2.BORDER_REFLECT_101)
+        # img = cv2.warpPerspective(img_ori, np.asarray(M), img_ori.shape[:2][::-1])
+        img = cv2.warpPerspective(img_ori, np.asarray(M), (int(img_ori.shape[1] * 1.01), int(img_ori.shape[0] * 1.01)), borderValue=[0, 0, 0])
         # 先丢弃部分因仿射变换带来的黑边
         # crop_rate = 0.003
         crop_rate = 0
         img_crop = img[int(img.shape[0] * crop_rate): img.shape[0]-int(img.shape[0] * crop_rate),
                        int(img.shape[1] * crop_rate): img.shape[1]-int(img.shape[1] * crop_rate)]
         real_loc_crop = real_loc + np.asarray([int(img.shape[1] * crop_rate), int(img.shape[0] * crop_rate)])
-        stitch_img[real_loc_crop[1]:real_loc_crop[1] + img_crop.shape[0],
-                   real_loc_crop[0]:real_loc_crop[0] + img_crop.shape[1]] = img_crop
+        sub_stitch = stitch_img[real_loc_crop[1]:real_loc_crop[1] + img_crop.shape[0],
+                                real_loc_crop[0]:real_loc_crop[0] + img_crop.shape[1]]
+        # tmp_mask = np.where(sub_stitch == [0, 0, 0], 255, 0)
+        # sub_stitch[:, :, :] = np.where(tmp_mask, img_crop, sub_stitch)
+        # show_img(sub_stitch)
+        sub_stitch[:, :, :] = merge_two_img(sub_stitch, img_crop)
+        # show_img(sub_stitch)
+        # sub_stitch[:, :, :] = cv2.addWeighted(sub_stitch, 1, img_crop, 1, 0)
 
     print("start save {}".format(os.path.join(save_dir, r"new_stitch_img.tif")))
     std_circle_reg_box = stitch_json["std_reg_box"]
@@ -365,11 +390,11 @@ def draw_img_by_json(pics_dir, stitch_json_path, save_dir):
 
 if __name__ == '__main__':
     pass
-    # pic_dir = r"E:\Cell_seg_images\20230404-BJ27BN08F6-B3-LGY-S-FG12-GE-20X-Cut"
-    # reg_box = [[4396, 4064], [29784, 3976], [29832, 29456], [4440, 29548]]
-    # pic_shape = (2048, 2448)
-    # save_dir = pic_dir + '-new_stitch'
-    # if not os.path.exists(save_dir):
-    #     os.mkdir(save_dir)
-    # stitch_json = new_stitch(pic_dir, reg_box, pic_shape=pic_shape, save_dir=save_dir)
+    pic_dir = r"E:\test\miji\S1000-Cut"
+    reg_box = [[4852, 3008], [30116, 2896], [30216, 28320], [4956, 28468]]
+    pic_shape = (2024, 2424)
+    save_dir = pic_dir + '-new_stitch'
+    if not os.path.exists(save_dir):
+        os.mkdir(save_dir)
+    stitch_json = new_stitch(pic_dir, reg_box, pic_shape=pic_shape, save_dir=save_dir)
 

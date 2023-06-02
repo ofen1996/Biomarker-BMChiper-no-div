@@ -344,7 +344,7 @@ def correct_whole_img(img_path):
 
 
 if __name__ == '__main__':
-    img_path = r"E:\Cell_seg_images\20230411-BI29BN16F6-A4-JZL-FG17-20X-Cut-new_stitch\new_stitch_img.tif"
+    img_path = r"E:\test\miji\S1000-Cut-new_stitch\new_stitch_img.tif"
     correct_whole_img(img_path)
 
 
