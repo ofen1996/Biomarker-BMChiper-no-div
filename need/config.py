@@ -7,6 +7,10 @@ class Config:
         self.ini_path = ini_path
         self.conf = None
 
+        self.base_mode = "S1000"
+        self.base_size_x = 46
+        self.base_size_y = 46
+
         self.DEBUG = None
         self.use_real_kp_only = None
         self.kp_detect_confidence = None
@@ -38,6 +42,11 @@ class Config:
     def load(self, ini_path):
         self.conf = configparser.ConfigParser()
         self.conf.read(ini_path, encoding="utf-8")
+
+        self.base_mode = self.conf.get("default", "base_mode")
+        if self.base_mode == "S2000":
+            self.base_size_x = 76
+            self.base_size_y = 75
 
         self.calculate_size = int(self.conf.get("correct-whole-img", "calculate_size"))
         self.out_size = int(self.conf.get("correct-whole-img", "max_out_size"))
