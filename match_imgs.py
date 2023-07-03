@@ -73,8 +73,17 @@ def cut_fov_img(mrxs_path, save_path, camera_resolution=(2448, 2048)):
 
 
 class StdCircles:
-    def __init__(self, ori_size, shape, d, r):
+    def __init__(self, ori_size, shape, d, r, M=None):
         self.circles_img, self.circles_mask, self.circle_centers = self.std_circles(ori_size, shape, d, r)
+        self.reg_box = [self.circle_centers[0, 0].tolist(), self.circle_centers[(30 + 1) * 46, (35 + 1) * 46].tolist()]
+
+        if M is not None:  # 对标准板做逆变换，使其在缝合过程避免变换丢失数据，最后再变换回正确图案
+            M_inv = np.linalg.inv(M)
+            self.circles_img = cv2.warpPerspective(self.circles_img, M_inv, self.circles_img.shape[:2][::-1])
+            self.circles_mask = cv2.warpPerspective(self.circles_mask, M_inv, self.circles_mask.shape[:2][::-1])
+            self.circle_centers = cv2.perspectiveTransform(
+                np.array(self.circle_centers, dtype=np.float32).reshape(-1, 1, 2), M_inv).reshape(
+                *self.circle_centers.shape).astype(int)
         # tmp = np.where(self.circles_mask > 0, 255, 0).astype(np.uint8)
         # edge_rect_dilate_a = int(conf.conf.get("std-template", "edge_rect_dilate_a"))
         # edge_rect_dilate_b = int(conf.conf.get("std-template", "edge_rect_dilate_b"))
@@ -102,7 +111,6 @@ class StdCircles:
                                          self.std_first_div_point[1]:self.std_first_div_point[1] + self.std_mask_size[1]]
         self.std_mask_centers = self.circle_centers[32: 32 + 30, 37: 37 + 35] - self.std_first_div_point[::-1]
 
-        self.reg_box = [self.circle_centers[0, 0].tolist(), self.circle_centers[(30 + 1) * 46, (35 + 1) * 46].tolist()]
 
     @staticmethod
     def std_circles(ori_size, shape, d, r, tile_limit=(46, 46)):
@@ -176,7 +184,7 @@ def calculate_M(reg_box):
 
     # 计算M变换矩阵
     M = M_matrix(mrxs_rect, nimg_rect)
-    return M
+    return M, nimg_rect
 
 
 def gen_index_by_reg_box(reg_box, img_shape):
@@ -205,10 +213,12 @@ def new_stitch(pics_dir, reg_box, pic_shape=(2048, 2448), save_dir=None):
         return os.path.join(save_dir, "new_stitch_img.tif")
 
     stitch_json = {"reg_box": reg_box}
-    M = calculate_M(reg_box)
+    M, rect_points = calculate_M(reg_box)
     stitch_json["M"] = M.tolist()
 
-    std_circle = StdCircles(conf.whole_img_size, (30, 35), 17.565, 7)
+    std_d = rect_points[2][0] / ((31*46)-1)
+    std_r = int(std_d * 0.4)
+    std_circle = StdCircles(conf.whole_img_size, (30, 35), std_d, std_r, M=M)
     stitch_json["std_reg_box"] = std_circle.reg_box
 
     print("---end draw std circles")
@@ -229,7 +239,8 @@ def new_stitch(pics_dir, reg_box, pic_shape=(2048, 2448), save_dir=None):
 
         img_ori = cv2.imread(os.path.join(pics_dir, "ori_{}_{}.tif".format(index_y, index_x)))
         # img = cv2.warpPerspective(img_ori, M, img_ori.shape[:2][::-1], borderMode=cv2.BORDER_REFLECT_101)
-        img = cv2.warpPerspective(img_ori, M, img_ori.shape[:2][::-1])
+
+        img = img_ori
         # img = img_ori.copy()
         out_img, centers = detector.detect(img, 0.4)
 
@@ -239,6 +250,7 @@ def new_stitch(pics_dir, reg_box, pic_shape=(2048, 2448), save_dir=None):
 
         max_match_kp = centers[0][:2]
         max_match_kp = np.asarray(max_match_kp) + (23, 18)
+        max_match_kp = np.asarray(max_match_kp)
 
         # 计算max_match_kp在整个图像中的空间坐标
         max_match_kp_loc = [index_x * img_ori.shape[1] + max_match_kp[0], index_y * img_ori.shape[0] + max_match_kp[1]]
@@ -253,13 +265,14 @@ def new_stitch(pics_dir, reg_box, pic_shape=(2048, 2448), save_dir=None):
 
         # 从mask里面截取模板template，然后精准匹配
         template_start_loc = np.asarray(kp_loc) - max_match_kp
-        match_range = 10
+        match_range = int(conf.conf.get("match-imgs", "match_range"))
         template = std_circle.circles_mask[template_start_loc[1]-match_range:template_start_loc[1]+img_ori.shape[0]+match_range,
                                            template_start_loc[0]-match_range:template_start_loc[0]+img_ori.shape[1]+match_range]
         if template.shape != tuple(np.asarray(img.shape[:2]) + match_range * 2):
             print("Different shape! template shape:{}, img shape shape:{}".format(template.shape, img.shape[:2]))
             continue
-
+        if index_y_x == [5, 5]:
+            pass
         match_result = cv2.matchTemplate(template, img[..., conf.stitch_channal], cv2.TM_SQDIFF)
         match_shift = cv2.minMaxLoc(match_result)[2] - np.asarray([match_range, match_range])
         real_loc = template_start_loc + match_shift
@@ -327,7 +340,7 @@ def auto_correct_stitch_json(stitch_json):
         error_num = abs(pred_loc[0] - real_loc[0]) + abs(pred_loc[1] - real_loc[1])
 
         print(f"pic_name: {pic_name}    real_loc: {real_loc}    pred_loc: {pred_loc}    error: {error_num}")
-        if error_num > (conf.overlap_x + conf.overlap_y):
+        if error_num > 2*int(conf.conf.get("match-imgs", "match_range")):
             stitch_json[pic_name] = pred_loc
             print(f"{pic_name} may be wrong, correct it to {pred_loc}")
 
@@ -365,13 +378,17 @@ def draw_img_by_json(pics_dir, stitch_json_path, save_dir):
         img_ori = cv2.imread(os.path.join(pics_dir, "ori_{}_{}.tif".format(index_y, index_x)))
         # img = cv2.warpPerspective(img_ori, np.asarray(M), img_ori.shape[:2][::-1], borderMode=cv2.BORDER_REFLECT_101)
         # img = cv2.warpPerspective(img_ori, np.asarray(M), img_ori.shape[:2][::-1])
-        img = cv2.warpPerspective(img_ori, np.asarray(M), (int(img_ori.shape[1] * 1.01), int(img_ori.shape[0] * 1.01)), borderValue=[0, 0, 0])
+        # img = cv2.warpPerspective(img_ori, np.asarray(M), (int(img_ori.shape[1] * 1.01), int(img_ori.shape[0] * 1.01)), borderValue=[0, 0, 0])
+
+        border_ex = 5
+        img = cv2.warpPerspective(img_ori, np.eye(3), (img_ori.shape[1]+border_ex, img_ori.shape[0]+border_ex), borderMode=cv2.BORDER_REPLICATE)  # 不做变形，只稍微扩充边界，防止黑边
+        # img = img_ori
         # 先丢弃部分因仿射变换带来的黑边
         # crop_rate = 0.003
         crop_rate = 0
         img_crop = img[int(img.shape[0] * crop_rate): img.shape[0]-int(img.shape[0] * crop_rate),
                        int(img.shape[1] * crop_rate): img.shape[1]-int(img.shape[1] * crop_rate)]
-        real_loc_crop = real_loc + np.asarray([int(img.shape[1] * crop_rate), int(img.shape[0] * crop_rate)])
+        real_loc_crop = real_loc + np.asarray([int(img.shape[1] * crop_rate), int(img.shape[0] * crop_rate)]) - border_ex
         sub_stitch = stitch_img[real_loc_crop[1]:real_loc_crop[1] + img_crop.shape[0],
                                 real_loc_crop[0]:real_loc_crop[0] + img_crop.shape[1]]
         # tmp_mask = np.where(sub_stitch == [0, 0, 0], 255, 0)
@@ -382,6 +399,9 @@ def draw_img_by_json(pics_dir, stitch_json_path, save_dir):
         # sub_stitch[:, :, :] = cv2.addWeighted(sub_stitch, 1, img_crop, 1, 0)
 
     print("start save {}".format(os.path.join(save_dir, r"new_stitch_img.tif")))
+
+    stitch_img = cv2.warpPerspective(stitch_img, np.asarray(M), (stitch_img.shape[1], stitch_img.shape[0]))
+
     std_circle_reg_box = stitch_json["std_reg_box"]
     tifffile.imwrite(os.path.join(save_dir, "new_stitch_img.tif"),
                      stitch_img[std_circle_reg_box[0][1]:std_circle_reg_box[1][1],
@@ -390,11 +410,12 @@ def draw_img_by_json(pics_dir, stitch_json_path, save_dir):
 
 if __name__ == '__main__':
     pass
-    pic_dir = r"E:\test\miji\S1000-Cut"
-    reg_box = [[4852, 3008], [30116, 2896], [30216, 28320], [4956, 28468]]
-    pic_shape = (2024, 2424)
+    pic_dir = r"E:\test\FG70-Cut"
+    reg_box = [[2092, 2812], [23222, 2676], [23352, 23922], [2226, 24058]]
+    pic_shape = (1950, 1944)
     save_dir = pic_dir + '-new_stitch'
     if not os.path.exists(save_dir):
         os.mkdir(save_dir)
     stitch_json = new_stitch(pic_dir, reg_box, pic_shape=pic_shape, save_dir=save_dir)
+
 
