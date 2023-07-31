@@ -160,6 +160,7 @@ def stitch_from_pic(pic_dir, fov_shape, save_dir, start_pic_index=(0, 0), stitch
                 pass
             pic_path = os.path.join(pic_dir, pic_name)
             img = cv2.imread(pic_path)
+            # img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
             # 判断当前图像的位置：1：起始位置（第一行第一张）
             #                 2：每一列第一张
@@ -222,11 +223,12 @@ def stitch_from_pic(pic_dir, fov_shape, save_dir, start_pic_index=(0, 0), stitch
                 start_loc = [(start_loc_1[0] + start_loc_2[0]) // 2, (start_loc_1[1] + start_loc_2[1]) // 2]
                 pass
 
-            if stitch_channel not in [None, 3]:
-                whole_img[start_loc[0]: start_loc[0] + img.shape[0], start_loc[1]: start_loc[1] + img.shape[1], ...] =\
-                    cv2.cvtColor(img[..., stitch_channel], cv2.COLOR_GRAY2BGR)
-            else:
-                whole_img[start_loc[0]: start_loc[0] + img.shape[0], start_loc[1]: start_loc[1] + img.shape[1]] = img
+            # if stitch_channel not in [None, 3]:
+            #     whole_img[start_loc[0]: start_loc[0] + img.shape[0], start_loc[1]: start_loc[1] + img.shape[1], ...] =\
+            #         cv2.cvtColor(img[..., stitch_channel], cv2.COLOR_GRAY2BGR)
+            # else:
+            #     whole_img[start_loc[0]: start_loc[0] + img.shape[0], start_loc[1]: start_loc[1] + img.shape[1]] = img
+            whole_img[start_loc[0]: start_loc[0] + img.shape[0], start_loc[1]: start_loc[1] + img.shape[1]] = img
             all_loc[pic_name] = start_loc
             print(pic_name, "finished, start loc:{}".format(start_loc))
 
@@ -237,7 +239,8 @@ def stitch_from_pic(pic_dir, fov_shape, save_dir, start_pic_index=(0, 0), stitch
     # show_img(whole_img)
 
     print("start save")
-    whole_img = cv2.cvtColor(whole_img, cv2.COLOR_BGR2RGB)
+    # whole_img = cv2.cvtColor(whole_img, cv2.COLOR_BGR2RGB)
+    whole_img = whole_img[:, :, ::-1]
     if not os.path.exists(save_dir):
         os.mkdir(save_dir)
     try:

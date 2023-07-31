@@ -110,7 +110,7 @@ def locate_split(div_sum, base_num):
     return new_split
 
 
-def detect_kp(img):
+def detect_kp(img, detect_channel=None):
     # 预测全图的所有关键点。将原图裁剪为h_num, w_num后，使用yolo预测关键点
     size_h, size_w = img.shape[:2]
     distance_h, distance_w = size_h // h_num, size_w // w_num
@@ -124,8 +124,10 @@ def detect_kp(img):
             distance_add = int(min(distance_h, distance_w) * 0.05)
             part_img = img[max(0, start_h - distance_add): start_h + int(distance_h * 1.05),
                            max(0, start_w - distance_add): start_w + int(distance_w * 1.05), :]
-
-            out_img, centers = detector.detect(part_img, conf.kp_detect_confidence)
+            if detect_channel is not None:  # 给定识别通道
+                out_img, centers = detector.detect(cv2.cvtColor(part_img[..., detect_channel], cv2.COLOR_GRAY2BGR), conf.kp_detect_confidence)
+            else:
+                out_img, centers = detector.detect(part_img, conf.kp_detect_confidence)
             for center in centers:
                 center[:2] = center[:2] + np.asarray((max(0, start_w - distance_add), max(0, start_h - distance_add)))
             # 过滤掉边缘的识别点，避免重复
@@ -273,7 +275,7 @@ def find_homography(real_kp_loc_plus, std_kp_loc):
     return h
 
 
-def correct_whole_img(img_path):
+def correct_whole_img(img_path, detect_channel=None):
     save_dir = os.path.split(img_path)[0]
     img_name = os.path.split(img_path)[1]
     save_dir = os.path.join(save_dir, os.path.splitext(img_name)[0])
@@ -296,7 +298,7 @@ def correct_whole_img(img_path):
     # 判断常数，以一个块的宽度0.3为标准
     judge_range = int(min(img.shape[:2]) / conf.base_size_x * 0.3)
     # 识别关键点
-    k_p_loc = detect_kp(img)
+    k_p_loc = detect_kp(img, detect_channel=detect_channel)
     # 过滤错误点
     kp_final, wrong_kp, kp_loc_confidence = filter_kp(k_p_loc, judge_range, img, save_dir)
     # 关键点序列化，把所有关键点对应到（45， 45）的位置上
@@ -344,7 +346,7 @@ def correct_whole_img(img_path):
 
 
 if __name__ == '__main__':
-    img_path = r"E:\test\miji\S1000-Cut-new_stitch\new_stitch_img.tif"
+    img_path = r"E:\test\level-2-chipFG78.tif"
     correct_whole_img(img_path)
 
 

@@ -8,7 +8,7 @@ a = Analysis(
     ['BMChiper.py'],
     pathex=[],
     binaries=[],
-    datas=[('./src/_jpeg8.cp310-win_amd64.pyd','imagecodecs'),('./model','model'),('./need','need'),('./setting','setting'),('./src','src'),('./sklearn/utils','sklearn')],
+    datas=[('./src/_jpeg8.cp310-win_amd64.pyd','imagecodecs'),('./model','model'),('./need','need'),('./setting','setting'),('./src','src'),('./sklearn/utils','sklearn/utils')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

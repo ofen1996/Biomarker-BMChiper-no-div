@@ -166,8 +166,11 @@ class ChipRegionMain(QMainWindow, Ui_MainWindow):
         print("Start correct whole img")
         conf.reload()  # 重新读取配置文件，以支持热修改
         if self.widget_right.image_filename is not None:
+            detect_channel = None
             try:
-                correct_whole_img(self.widget_right.image_filename)
+                if self.widget_right.channel_show != 0:
+                    detect_channel = self.widget_right.channel_show - 1
+                correct_whole_img(self.widget_right.image_filename, detect_channel=detect_channel)
             except Exception as e:
                 print(traceback.format_exc(), e)
                 return
@@ -216,6 +219,13 @@ class ChipRegionMain(QMainWindow, Ui_MainWindow):
         try:
             corners = np.asarray(self.widget_right.draw_argvs['rect_points']) * 4
             print(corners)
+
+            # 改变 stitch_channal
+            if self.widget_right.channel_show != 0:
+                stitch_channel = self.widget_right.channel_show - 1
+                conf.conf.set("match-imgs", "stitch_channal", str(stitch_channel))
+                with open(conf.ini_path, "w") as conf_ini:
+                    conf.conf.write(conf_ini)
 
             stitch_path = match_imgs.cut_and_stitch(self.widget_right.image_filename, corners.tolist())
             # camera_resolutions = [(2448, 2048), (2048, 2048)]
