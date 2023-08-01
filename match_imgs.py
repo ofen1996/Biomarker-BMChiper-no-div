@@ -614,7 +614,8 @@ def draw_img_by_json(pics_dir, stitch_json_path, save_dir):
         real_loc = stitch_json["ori_{}_{}.tif".format(index_y, index_x)][0]
         print("ori_{}_{}.tif : {}".format(index_y, index_x, real_loc))
 
-        img_ori = cv2.imread(os.path.join(pics_dir, "ori_{}_{}.tif".format(index_y, index_x)))
+        # img_ori = cv2.imread(os.path.join(pics_dir, "ori_{}_{}.tif".format(index_y, index_x)))
+        img_ori = tifffile.imread(os.path.join(pics_dir, "ori_{}_{}.tif".format(index_y, index_x)))[..., :3]
         # img = cv2.warpPerspective(img_ori, np.asarray(M), img_ori.shape[:2][::-1], borderMode=cv2.BORDER_REFLECT_101)
         # img = cv2.warpPerspective(img_ori, np.asarray(M), img_ori.shape[:2][::-1])
         # img = cv2.warpPerspective(img_ori, np.asarray(M), (int(img_ori.shape[1] * 1.01), int(img_ori.shape[0] * 1.01)), borderValue=[0, 0, 0])
@@ -644,14 +645,14 @@ def draw_img_by_json(pics_dir, stitch_json_path, save_dir):
 
     # stitch_img = binary_pic(stitch_img)
 
-    tifffile.imwrite(os.path.join(save_dir, "new_stitch_img.tif"), stitch_img, compression="jpeg")
-    # stitch_img = cv2.warpPerspective(stitch_img, np.asarray(M), (stitch_img.shape[1], stitch_img.shape[0]))
+    # tifffile.imwrite(os.path.join(save_dir, "new_stitch_img.tif"), stitch_img, compression="jpeg")
+    chip_stitch_img = cv2.warpPerspective(stitch_img, np.asarray(M), (stitch_img.shape[1], stitch_img.shape[0]))
     #
-    # std_circle_reg_box = stitch_json["std_reg_box"]
-    # tifffile.imwrite(os.path.join(save_dir, "new_stitch_img.tif"),
-    #                  stitch_img[std_circle_reg_box[0][1]:std_circle_reg_box[1][1],
-    #                             std_circle_reg_box[0][0]:std_circle_reg_box[1][0]],
-    #                  compression="jpeg")
+    std_circle_reg_box = stitch_json["std_reg_box"]
+    tifffile.imwrite(os.path.join(save_dir, "new_stitch_img.tif"),
+                     chip_stitch_img[std_circle_reg_box[0][1]:std_circle_reg_box[1][1],
+                                     std_circle_reg_box[0][0]:std_circle_reg_box[1][0]],
+                     compression="jpeg")
     return stitch_img
 
 if __name__ == '__main__':
