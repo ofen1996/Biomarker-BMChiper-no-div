@@ -34,7 +34,7 @@ def cal_zoom_rate(width, height):
 
 def gen_std_board_loc(zoom_scale):
     img_width = 1000
-    std_kp_loc = np.zeros((conf.base_size_y - 1, conf.base_size_x - 1, 2), dtype=float)
+    std_kp_loc = np.zeros((conf.base_size_x - 1, conf.base_size_y - 1, 2), dtype=float)
     std_w = 1.0 * img_width / conf.base_size_x / 31 * zoom_scale
     std_h = std_w * np.sqrt(3) / 2
 
@@ -346,7 +346,7 @@ def correct_whole_img(img_path, detect_channel=None):
 
 
 if __name__ == '__main__':
-    img_path = r"E:\test\level-2-chipFG78.tif"
-    correct_whole_img(img_path)
+    img_path = r"E:\test\20230817-20230609-BG27BN02F6-A3-F-G1-16UM-PI-20X-4F-4-Cut-new_stitch\new_stitch_img.tif"
+    correct_whole_img(img_path, detect_channel=0)
 
 

@@ -159,7 +159,7 @@ def cut_fov_img(mrxs_path, save_path, camera_resolution=(2448, 2048)):
 
     # 先裁剪全图
     whole_img = np.asarray(slide.read_region((BOUND_X, BOUND_Y), 0, (BOUND_WIDTH, BOUND_HEIGHT)))[..., :3]
-    whole_img = binary_pic(whole_img)
+    # whole_img = binary_pic(whole_img)
 
     for hi in range(FOV_SHAPE[1]):
         for wi in range(FOV_SHAPE[0]):
@@ -180,6 +180,8 @@ class StdCircles:
     def __init__(self, ori_size, shape, d, r, M=None):
         self.circles_img, self.circles_mask, self.circle_centers = self.std_circles(ori_size, shape, d, r)
         self.reg_box = [self.circle_centers[0, 0].tolist(), self.circle_centers[(30 + 1) * 46, (35 + 1) * 46].tolist()]
+        self.reg_box[0][0] += round(d//2)
+        self.reg_box[1][0] += round(d//2)
 
         if M is not None:  # 对标准板做逆变换，使其在缝合过程避免变换丢失数据，最后再变换回正确图案
             M_inv = np.linalg.inv(M)
@@ -335,8 +337,8 @@ def new_stitch(pics_dir, reg_box, pic_shape=(2048, 2448), save_dir=None):
     # overlap_rate = 0.014297385620915032
     # std_d = rect_points[2][0] / ((31*46)-1)
     # std_d = (rect_points[2][0] - pic_shape[1]*overlap_rate*(46-1)) / ((31*46)-1)
-    std_d = 14.83
-    # std_d = 17.565
+    # std_d = 14.83
+    std_d = 17.565
     std_r = int(std_d * 0.4)
     std_circle = StdCircles(conf.whole_img_size, (30, 35), std_d, std_r, M=M)
     stitch_json["std_reg_box"] = std_circle.reg_box
@@ -365,7 +367,7 @@ def new_stitch(pics_dir, reg_box, pic_shape=(2048, 2448), save_dir=None):
 
             index_y, index_x = index_y_x
 
-            img = cv2.imread(os.path.join(pics_dir, "ori_{}_{}.tif".format(index_y, index_x)))
+            img = tifffile.imread(os.path.join(pics_dir, "ori_{}_{}.tif".format(index_y, index_x)))
             # img = cv2.warpPerspective(img_ori, M, img_ori.shape[:2][::-1], borderMode=cv2.BORDER_REFLECT_101)
 
             # img = img_ori.copy()
@@ -536,14 +538,15 @@ def auto_correct_stitch_json(stitch_json, template_mask=None):
         error_num = abs(pred_loc[0] - real_loc[0]) + abs(pred_loc[1] - real_loc[1])
 
         print(f"pic_name: {pic_name}    real_loc: {real_loc}    pred_loc: {pred_loc}    error: {error_num}")
-        if error_num > 0.5 * int(conf.conf.get("match-imgs", "match_range")):
+        if error_num > 2 * int(conf.conf.get("match-imgs", "match_range")):
             if template_mask is not None:
-                img_ori = cv2.imread(os.path.join(stitch_json["pics_dir"], pic_name))
-                img_merge = cv2.cvtColor(img_ori[..., 0] | img_ori[..., 1] | img_ori[..., 2], cv2.COLOR_GRAY2BGR)
+                img_ori = tifffile.imread(os.path.join(stitch_json["pics_dir"], pic_name))
+                img_merge = cv2.cvtColor(img_ori[..., conf.stitch_channal], cv2.COLOR_GRAY2BGR)
+                # img_merge = cv2.cvtColor(img_ori[..., 0] | img_ori[..., 1] | img_ori[..., 2], cv2.COLOR_GRAY2BGR)
 
                 ###添加匹配过程###
-                # match_range = int(conf.conf.get("match-imgs", "match_range")) // 3
-                match_range = 1
+                match_range = int(conf.conf.get("match-imgs", "match_range"))
+                # match_range = 1
                 # match_range = 1
                 template = template_mask[
                            pred_loc[1] - match_range:pred_loc[1] + img_ori.shape[0] + match_range,
@@ -551,7 +554,7 @@ def auto_correct_stitch_json(stitch_json, template_mask=None):
                 if template.shape != tuple(np.asarray(img_merge.shape[:2]) + match_range * 2):
                     print("Different shape! template shape:{}, img shape shape:{}".format(template.shape, img_merge.shape[:2]))
                     continue
-                match_result = cv2.matchTemplate(template, cv2.bitwise_not(img_merge[..., conf.stitch_channal]),
+                match_result = cv2.matchTemplate(template, img_merge[..., conf.stitch_channal],
                                                  cv2.TM_CCOEFF)
                 # match_shift = cv2.minMaxLoc(match_result)[2] - np.asarray([match_range, match_range])
                 match_shift = cv2.minMaxLoc(match_result)[3] - np.asarray([match_range, match_range])
@@ -649,16 +652,36 @@ def draw_img_by_json(pics_dir, stitch_json_path, save_dir):
     chip_stitch_img = cv2.warpPerspective(stitch_img, np.asarray(M), (stitch_img.shape[1], stitch_img.shape[0]))
     #
     std_circle_reg_box = stitch_json["std_reg_box"]
+    img_dist = chip_stitch_img[std_circle_reg_box[0][1]:std_circle_reg_box[1][1],
+                               std_circle_reg_box[0][0]:std_circle_reg_box[1][0]]
+
+    if img_dist.shape[0] > conf.out_size:
+        img_dist = cv2.resize(img_dist, (int(conf.out_size * 0.99435), conf.out_size))
+
     tifffile.imwrite(os.path.join(save_dir, "new_stitch_img.tif"),
-                     chip_stitch_img[std_circle_reg_box[0][1]:std_circle_reg_box[1][1],
-                                     std_circle_reg_box[0][0]:std_circle_reg_box[1][0]],
+                     img_dist,
                      compression="jpeg")
+
+    # 画底板
+    from need.CorrectWholeImg import cal_zoom_rate, gen_std_board_loc, gen_std_board_img
+    zoom_scale = cal_zoom_rate(img_dist.shape[1], img_dist.shape[0])
+    std_kp_loc, std_w_h = gen_std_board_loc(zoom_scale)
+    img_dist_with_board = gen_std_board_img(img_dist.shape[1], img_dist.shape[0], std_kp_loc, save_dir,
+                                            base_img=img_dist, mask_color=conf.std_mask_color)
+    tifffile.imwrite(os.path.join(save_dir, "img_dist_with_board.tif"), img_dist_with_board,
+                     compression=conf.compression_mode)
+    ##
+
     return stitch_img
+
+
+
+
 
 if __name__ == '__main__':
     pass
-    pic_dir = r"E:\test\FG76-XYSB-IF-20X.mrxs"
-    reg_box = [[2076, 1828], [23340, 1712], [23476, 23068], [2200, 23188]]
+    pic_dir = r"E:\test\20230817-20230609-BG27BN02F6-A3-F-G1-16UM-PI-20X-4F-4.mrxs"
+    reg_box = [[4324, 4324], [29640, 4240], [29668, 29576], [4364, 29664]]
     # pic_shape = (1950, 1944)
     # save_dir = pic_dir + '-new_stitch'
     # if not os.path.exists(save_dir):
