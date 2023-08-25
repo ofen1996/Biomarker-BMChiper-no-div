@@ -7,7 +7,7 @@ import tifffile
 from need.ofen_tool import *
 from need.KpDetectByYolo import MyDetector
 from need.config import conf
-
+from scipy.signal import find_peaks
 from sklearn.linear_model import LinearRegression
 
 detector = MyDetector("./model/best.onnx")
@@ -326,24 +326,30 @@ def new_stitch(pics_dir, reg_box, pic_shape=(2048, 2448), save_dir=None):
     if os.path.exists(os.path.join(save_dir, "stitch_json.json")):
         print("stitch_json is exists, Start stitch img by stitch_json.json")
         draw_img_by_json(pics_dir, os.path.join(save_dir, "stitch_json.json"), save_dir)
-        return os.path.join(save_dir, "new_stitch_img.tif")
+        return os.path.join(save_dir, "img_dist.tif")
     reg_box = np.asarray(reg_box)
     stitch_json = {"reg_box": reg_box.tolist()}
     M, rect_points = calculate_M(reg_box)
     stitch_json["M"] = M.tolist()
     stitch_json["pics_dir"] = pics_dir
 
+    x_y_range, all_index_y_x = gen_index_by_reg_box(reg_box, pic_shape)
+    stitch_json["x_y_range"], stitch_json["all_index_y_x"] = x_y_range, all_index_y_x
+
     # 17.565
     # overlap_rate = 0.014297385620915032
     # std_d = rect_points[2][0] / ((31*46)-1)
     # std_d = (rect_points[2][0] - pic_shape[1]*overlap_rate*(46-1)) / ((31*46)-1)
-    # std_d = 14.83
-    std_d = 17.565
+    std_d = 14.83
+    std_d = 14.836363636363636
+    std_d = calculate_std_d(pics_dir, stitch_json)
+    # std_d = 17.565
     std_r = int(std_d * 0.4)
     std_circle = StdCircles(conf.whole_img_size, (30, 35), std_d, std_r, M=M)
     stitch_json["std_reg_box"] = std_circle.reg_box
     stitch_json["std_circles_d"] = std_d
     stitch_json["std_circles_center_path"] = os.path.join(save_dir, "circle_centers.npy")
+
     np.save(stitch_json["std_circles_center_path"], std_circle.circle_centers)
 
     print("---end draw std circles")
@@ -355,9 +361,6 @@ def new_stitch(pics_dir, reg_box, pic_shape=(2048, 2448), save_dir=None):
     print("---end draw std stitch_img")
     print("start match img---")
 
-    x_y_range, all_index_y_x = gen_index_by_reg_box(reg_box, pic_shape)
-    stitch_json["x_y_range"], stitch_json["all_index_y_x"] = x_y_range, all_index_y_x
-
     temp_circles_mask = std_circle.circles_mask.copy()
 
     if not os.path.exists(os.path.join(save_dir, "stitch_json_ori.json")):
@@ -367,7 +370,7 @@ def new_stitch(pics_dir, reg_box, pic_shape=(2048, 2448), save_dir=None):
 
             index_y, index_x = index_y_x
 
-            img = tifffile.imread(os.path.join(pics_dir, "ori_{}_{}.tif".format(index_y, index_x)))
+            img = tifffile.imread(os.path.join(pics_dir, "ori_{}_{}.tif".format(index_y, index_x)))[..., :3]
             # img = cv2.warpPerspective(img_ori, M, img_ori.shape[:2][::-1], borderMode=cv2.BORDER_REFLECT_101)
 
             # img = img_ori.copy()
@@ -502,7 +505,7 @@ def new_stitch(pics_dir, reg_box, pic_shape=(2048, 2448), save_dir=None):
 
     tifffile.imwrite(os.path.join(save_dir, "new_stitch_img_with_circles.tif"), stitch_img, compression="jpeg")
 
-    return os.path.join(save_dir, "new_stitch_img.tif")
+    return os.path.join(save_dir, "img_dist.tif")
 
 
 def auto_correct_stitch_json(stitch_json, template_mask=None):
@@ -658,7 +661,7 @@ def draw_img_by_json(pics_dir, stitch_json_path, save_dir):
     if img_dist.shape[0] > conf.out_size:
         img_dist = cv2.resize(img_dist, (int(conf.out_size * 0.99435), conf.out_size))
 
-    tifffile.imwrite(os.path.join(save_dir, "new_stitch_img.tif"),
+    tifffile.imwrite(os.path.join(save_dir, "img_dist.tif"),
                      img_dist,
                      compression="jpeg")
 
@@ -675,17 +678,50 @@ def draw_img_by_json(pics_dir, stitch_json_path, save_dir):
     return stitch_img
 
 
+def find_distance(img, M=None, conv_len=20, peaks_threshold=0.25, peaks_min_distance=100):
+    # 利用寻峰方法找到一张二值化图的平均分界线距离
+    if M is not None:
+        img = cv2.warpPerspective(img, M, img.shape[:2][::-1])
 
+    img_b = img[..., conf.stitch_channal]
+    # show_img(img_b)
+
+    x_sum = np.sum(img_b, axis=0, dtype=int)
+    # import matplotlib.pyplot as plt
+    fft_signal = abs(np.fft.fft(x_sum))
+    fft_signal[:50] = 0
+    fft_signal[-1000:] = 0
+    # plt.plot(fft_signal)
+    f = np.argmax(fft_signal)
+
+    # show_img(img_b)
+    # plt.close()
+    return len(x_sum)/f * 2  # x方向统计纵轴频率间距，由于微球是错行相隔，所以频率会翻倍，所以计算“周期”要*2
+
+
+def calculate_std_d(pics_dir, stitch_json):
+    M = np.array(stitch_json["M"])
+    x_y_range = stitch_json["x_y_range"]
+
+    all_mean_distance = []
+    for i in range(20):
+        # 随机选择序号，避开边缘
+        random_x = random.randint(x_y_range[0][0] + 1, x_y_range[1][0] - 1)
+        random_y = random.randint(x_y_range[0][1] + 1, x_y_range[1][1] - 1)
+        img = tifffile.imread(os.path.join(pics_dir, f"ori_{random_y}_{random_x}.tif"))
+        mean_distance = find_distance(img, M=M)
+        all_mean_distance.append(mean_distance)
+        print(f"ori_{random_y}_{random_x}.tif -> mean_distance:{mean_distance}")
+    return np.median(all_mean_distance)
 
 
 if __name__ == '__main__':
     pass
-    pic_dir = r"E:\test\20230817-20230609-BG27BN02F6-A3-F-G1-16UM-PI-20X-4F-4.mrxs"
-    reg_box = [[4324, 4324], [29640, 4240], [29668, 29576], [4364, 29664]]
-    # pic_shape = (1950, 1944)
-    # save_dir = pic_dir + '-new_stitch'
-    # if not os.path.exists(save_dir):
-    #     os.mkdir(save_dir)
+    pic_dir = r"E:\test\tmp\20230823-20230627-CA07BN12F3-A3-T-10-FG94-IF-20X-20230823-110146167.mrxs"
+    reg_box = [[3972, 2764], [25232, 2648], [25364, 23992], [4108, 24108]]
     stitch_json = cut_and_stitch(pic_dir, reg_box)
 
+    # pics_dir = r"E:\test\tmp\20230823-20230309-BK16BN18F6-B4-T-2-FG93-IF-20X-20230823-103731383-Cut"
+    # stitch_json = load_json(r"E:\test\tmp\20230823-20230309-BK16BN18F6-B4-T-2-FG93-IF-20X-20230823-103731383-Cut-new_stitch\stitch_json.json")
+    # a = calculate_std_d(pics_dir, stitch_json)
 
