@@ -174,6 +174,23 @@ def my_conv2d(img, conv_mask, start_loc=(0, 0), end_loc=None,
     return result
 
 
+def my_warpPerspective(src, M, dsize, **kwargs):
+    # 对于尺寸超出限制的图像，采取先缩放，再映射，再放大回原尺寸
+    max_len = max(src.shape)
+    if max_len > 32768:
+        # from skimage import transform
+        # warped_image = transform.warp(src, np.linalg.inv(M), output_shape=dsize[::-1])
+        # return (warped_image * 255).astype(np.uint8)
+
+        scale_rate = 32000 / max_len
+        scale_img = cv2.resize(src, (int(src.shape[1] * scale_rate), int(src.shape[0] * scale_rate)))
+        scale_img = cv2.warpPerspective(scale_img, M, scale_img.shape[:2][::-1], **kwargs)
+        return cv2.resize(scale_img, src.shape[:2][::-1])
+    else:
+        return cv2.warpPerspective(src, M, dsize, **kwargs)
+    pass
+
+
 def gamma_trans(img, gamma):
     # 具体做法是先归一化到1，然后gamma作为指数值求出新的像素值再还原
     gamma_table = [np.power(x / 255.0, gamma) * 255.0 for x in range(256)]

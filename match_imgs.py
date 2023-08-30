@@ -3,6 +3,7 @@ import os.path
 import cv2
 import numpy as np
 import openslide
+import skimage.transform
 import tifffile
 from need.ofen_tool import *
 from need.KpDetectByYolo import MyDetector
@@ -150,6 +151,8 @@ def cut_fov_img(mrxs_path, save_path, camera_resolution=(2448, 2048)):
     if FOV_COUNT % (FOV_SHAPE[0] * FOV_SHAPE[1]) != 0:
         print("FOV_SHAPE: {}".format(FOV_SHAPE))
         print("FOV_COUNT: {}".format(FOV_COUNT))
+        if conf.if_raise_exception:
+            raise Exception("Fov is wrong!")
     # 计算得到每一个视场的像素值尺寸
     FOV_PIXES = ((BOUND_WIDTH, BOUND_HEIGHT) / FOV_SHAPE).astype(int)
 
@@ -158,9 +161,10 @@ def cut_fov_img(mrxs_path, save_path, camera_resolution=(2448, 2048)):
         return FOV_SHAPE[::-1], FOV_PIXES[::-1]
 
     # 先裁剪全图
-    whole_img = np.asarray(slide.read_region((BOUND_X, BOUND_Y), 0, (BOUND_WIDTH, BOUND_HEIGHT)))[..., :3]
+    whole_img = np.asarray(slide.read_region((BOUND_X, BOUND_Y), 1, (BOUND_WIDTH, BOUND_HEIGHT)))[..., :3]
     # whole_img = binary_pic(whole_img)
-
+    FOV_PIXES[1] = FOV_PIXES[1]//2
+    FOV_PIXES[0] = FOV_PIXES[0]//2
     for hi in range(FOV_SHAPE[1]):
         for wi in range(FOV_SHAPE[0]):
             # select_part = np.asarray((wi, hi))
@@ -178,15 +182,19 @@ def cut_fov_img(mrxs_path, save_path, camera_resolution=(2448, 2048)):
 
 class StdCircles:
     def __init__(self, ori_size, shape, d, r, M=None):
-        self.circles_img, self.circles_mask, self.circle_centers = self.std_circles(ori_size, shape, d, r)
-        self.reg_box = [self.circle_centers[0, 0].tolist(), self.circle_centers[(30 + 1) * 46, (35 + 1) * 46].tolist()]
+        self.circles_img, self.circles_mask, self.circle_centers = self.std_circles(ori_size, shape, d, r,
+                                                                                    tile_limit=(conf.base_size_x,
+                                                                                                conf.base_size_y))
+        self.reg_box = [self.circle_centers[0, 0].tolist(),
+                        self.circle_centers[(30 + 1) * conf.base_size_x, (35 + 1) * conf.base_size_y].tolist()]
         self.reg_box[0][0] += round(d//2)
         self.reg_box[1][0] += round(d//2)
 
         if M is not None:  # 对标准板做逆变换，使其在缝合过程避免变换丢失数据，最后再变换回正确图案
             M_inv = np.linalg.inv(M)
-            self.circles_img = cv2.warpPerspective(self.circles_img, M_inv, self.circles_img.shape[:2][::-1])
-            self.circles_mask = cv2.warpPerspective(self.circles_mask, M_inv, self.circles_mask.shape[:2][::-1])
+            # self.circles_img = cv2.warpPerspective(self.circles_img, M_inv, self.circles_img.shape[:2][::-1])
+            self.circles_img = my_warpPerspective(self.circles_img, M_inv, self.circles_img.shape[:2][::-1])
+            self.circles_mask = my_warpPerspective(self.circles_mask, M_inv, self.circles_mask.shape[:2][::-1])
             # 先调换一下维度顺序，在转换，再换回来
             self.circle_centers = np.round(cv2.perspectiveTransform(
                 np.array(self.circle_centers, dtype=np.float32).reshape(-1, 1, 2), M_inv).reshape(
@@ -340,11 +348,21 @@ def new_stitch(pics_dir, reg_box, pic_shape=(2048, 2448), save_dir=None):
     # overlap_rate = 0.014297385620915032
     # std_d = rect_points[2][0] / ((31*46)-1)
     # std_d = (rect_points[2][0] - pic_shape[1]*overlap_rate*(46-1)) / ((31*46)-1)
-    std_d = 14.83
-    std_d = 14.836363636363636
+    # std_d = 14.83
+    # std_d = 14.836363636363636
     std_d = calculate_std_d(pics_dir, stitch_json)
     # std_d = 17.565
     std_r = int(std_d * 0.4)
+    print("std_d :{}".format(std_d))
+    # 重新设定whole_img_size
+    whole_img_size = (int(conf.std_edge_size[0] * 2 + std_d * 31 * conf.base_size_x) + 1,
+                      int(conf.std_edge_size[1] * 2 + std_d * 0.5 * np.sqrt(3) * 36 * conf.base_size_y) + 1
+                      )
+    conf.conf.set("match-imgs", "whole_img_size", str(whole_img_size))
+    with open(conf.ini_path, "w") as conf_ini:
+        conf.conf.write(conf_ini)
+    conf.whole_img_size = whole_img_size
+
     std_circle = StdCircles(conf.whole_img_size, (30, 35), std_d, std_r, M=M)
     stitch_json["std_reg_box"] = std_circle.reg_box
     stitch_json["std_circles_d"] = std_d
@@ -397,7 +415,7 @@ def new_stitch(pics_dir, reg_box, pic_shape=(2048, 2448), save_dir=None):
             max_match_kp_rel = np.asarray(max_match_kp_loc) - reg_box[0]
 
             # 下面估算预测的关键点在std_mask底板中的位置
-            distance = (np.asarray(reg_box[2]) - reg_box[0]) // 46
+            distance = (np.asarray(reg_box[2]) - reg_box[0]) // np.array([conf.base_size_x, conf.base_size_y])
             tile_index_x, tile_index_y = np.round(max_match_kp_rel / distance).astype(int)
             kp_loc = std_circle.circle_centers[tile_index_x * 31 + 1, tile_index_y * 36 + 1]  # 找到对应块的第一个圆心坐标(x,y)，近似对应kp位置
             # show_img(std_circle.circles_mask[kp_loc[1]:kp_loc[1]+400, kp_loc[0]:kp_loc[0]+400])
@@ -488,7 +506,7 @@ def new_stitch(pics_dir, reg_box, pic_shape=(2048, 2448), save_dir=None):
     # tmp_circles_img = std_circle.circles_img[std_circle_reg_box[0][1]:std_circle_reg_box[1][1],
     #                                          std_circle_reg_box[0][0]:std_circle_reg_box[1][0]]
     # stitch_img[..., 1] += tmp_circles_img
-    stitch_img[..., 1] += std_circle.circles_img
+    stitch_img[std_circle.circles_img > 50] = [125, 125, 125]
 
     # 绘制双线性拟合点位与实际匹配点位
     tmp_all_index = np.array([x for x in stitch_json["all_index_y_x"] if f"ori_{x[0]}_{x[1]}.tif" in stitch_json])
@@ -652,14 +670,15 @@ def draw_img_by_json(pics_dir, stitch_json_path, save_dir):
     # stitch_img = binary_pic(stitch_img)
 
     # tifffile.imwrite(os.path.join(save_dir, "new_stitch_img.tif"), stitch_img, compression="jpeg")
-    chip_stitch_img = cv2.warpPerspective(stitch_img, np.asarray(M), (stitch_img.shape[1], stitch_img.shape[0]))
+    chip_stitch_img = my_warpPerspective(stitch_img, np.asarray(M), (stitch_img.shape[1], stitch_img.shape[0]))
     #
     std_circle_reg_box = stitch_json["std_reg_box"]
     img_dist = chip_stitch_img[std_circle_reg_box[0][1]:std_circle_reg_box[1][1],
                                std_circle_reg_box[0][0]:std_circle_reg_box[1][0]]
 
     if img_dist.shape[0] > conf.out_size:
-        img_dist = cv2.resize(img_dist, (int(conf.out_size * 0.99435), conf.out_size))
+        out_size_rate_w_h = (31*2*conf.base_size_x)/(36*np.sqrt(3)*conf.base_size_y)
+        img_dist = cv2.resize(img_dist, (int(conf.out_size * out_size_rate_w_h), conf.out_size))
 
     tifffile.imwrite(os.path.join(save_dir, "img_dist.tif"),
                      img_dist,
@@ -681,17 +700,21 @@ def draw_img_by_json(pics_dir, stitch_json_path, save_dir):
 def find_distance(img, M=None, conv_len=20, peaks_threshold=0.25, peaks_min_distance=100):
     # 利用寻峰方法找到一张二值化图的平均分界线距离
     if M is not None:
-        img = cv2.warpPerspective(img, M, img.shape[:2][::-1])
+        img = my_warpPerspective(img, M, img.shape[:2][::-1])
 
     img_b = img[..., conf.stitch_channal]
     # show_img(img_b)
 
     x_sum = np.sum(img_b, axis=0, dtype=int)
-    # import matplotlib.pyplot as plt
     fft_signal = abs(np.fft.fft(x_sum))
-    fft_signal[:50] = 0
-    fft_signal[-1000:] = 0
+    # 控制数据范围，避免离谱数据
+    # fft_signal[0] = 0
+    fft_signal[:len(x_sum)//10] = 0
+    fft_signal[-len(x_sum)//2:] = 0
+
+    # import matplotlib.pyplot as plt
     # plt.plot(fft_signal)
+    # plt.plot(x_sum)
     f = np.argmax(fft_signal)
 
     # show_img(img_b)
@@ -717,11 +740,15 @@ def calculate_std_d(pics_dir, stitch_json):
 
 if __name__ == '__main__':
     pass
-    pic_dir = r"E:\test\tmp\20230823-20230627-CA07BN12F3-A3-T-10-FG94-IF-20X-20230823-110146167.mrxs"
-    reg_box = [[3972, 2764], [25232, 2648], [25364, 23992], [4108, 24108]]
+    pic_dir = r"E:\biomarker_data\S2000\20230810-20230719-1-V2AB-1-S2000-WW-N-IF-20X.mrxs"
+    reg_box = [[1816, 1940], [36960, 1728], [37184, 36524], [2060, 36744]]
     stitch_json = cut_and_stitch(pic_dir, reg_box)
 
-    # pics_dir = r"E:\test\tmp\20230823-20230309-BK16BN18F6-B4-T-2-FG93-IF-20X-20230823-103731383-Cut"
+    # pics_dir = r"E:\Cell_seg_images\20230411-BI10BN04F4-B4-JZL-FG16-20X-Cut"
     # stitch_json = load_json(r"E:\test\tmp\20230823-20230309-BK16BN18F6-B4-T-2-FG93-IF-20X-20230823-103731383-Cut-new_stitch\stitch_json.json")
     # a = calculate_std_d(pics_dir, stitch_json)
+
+    # img=r"E:\biomarker_data\S2000\20230810-20230719-1-V2AB-1-S2000-WW-N-IF-20X-Cut\ori_9_14.tif"
+    # img = tifffile.imread(img)
+    # a = find_distance(img)
 

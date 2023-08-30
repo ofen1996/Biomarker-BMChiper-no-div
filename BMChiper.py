@@ -227,6 +227,7 @@ class ChipRegionMain(QMainWindow, Ui_MainWindow):
                 with open(conf.ini_path, "w") as conf_ini:
                     conf.conf.write(conf_ini)
 
+            conf.reload()  # 重新读取配置文件，以支持热修改
             stitch_path = match_imgs.cut_and_stitch(self.widget_right.image_filename, corners.tolist())
             # camera_resolutions = [(2448, 2048), (2048, 2048)]
             # camera_resolution = camera_resolutions[self.comboBox_camera_type.currentIndex()]
