@@ -161,10 +161,10 @@ def cut_fov_img(mrxs_path, save_path, camera_resolution=(2448, 2048)):
         return FOV_SHAPE[::-1], FOV_PIXES[::-1]
 
     # 先裁剪全图
-    whole_img = np.asarray(slide.read_region((BOUND_X, BOUND_Y), 1, (BOUND_WIDTH, BOUND_HEIGHT)))[..., :3]
+    whole_img = np.asarray(slide.read_region((BOUND_X, BOUND_Y), 0, (BOUND_WIDTH, BOUND_HEIGHT)))[..., :3]
     # whole_img = binary_pic(whole_img)
-    FOV_PIXES[1] = FOV_PIXES[1]//2
-    FOV_PIXES[0] = FOV_PIXES[0]//2
+    # FOV_PIXES[1] = FOV_PIXES[1]//2
+    # FOV_PIXES[0] = FOV_PIXES[0]//2
     for hi in range(FOV_SHAPE[1]):
         for wi in range(FOV_SHAPE[0]):
             # select_part = np.asarray((wi, hi))
