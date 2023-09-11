@@ -193,6 +193,13 @@
               </property>
              </spacer>
             </item>
+            <item>
+             <widget class="QPushButton" name="correct_match_result">
+              <property name="text">
+               <string>二分镜缝合校正</string>
+              </property>
+             </widget>
+            </item>
            </layout>
           </widget>
           <widget class="QWidget" name="page_chip_region">
@@ -480,6 +487,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>correct_match_result</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>correct_match_result_cao()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>217</x>
+     <y>343</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>423</x>
+     <y>290</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>auto_reg_chip_region_cao()</slot>
@@ -493,5 +516,6 @@
   <slot>correct_whole_cao()</slot>
   <slot>choose_channel_show_cao()</slot>
   <slot>new_stitch_channel_cao()</slot>
+  <slot>correct_match_result_cao()</slot>
  </slots>
 </ui>

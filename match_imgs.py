@@ -269,6 +269,7 @@ class StdCircles:
                     # 左下角缺口
                     continue
                 circles_mask = cv2.circle(circles_mask, tuple(tmp_center), r, int(255 * rate), -1)
+                # circles_mask = cv2.circle(circles_mask, tuple(tmp_center), r//3, 0, -1)
                 circles_img = cv2.circle(circles_img, tuple(tmp_center), r, 255, 1)
         # print(circle_centers)
         # for center in circle_centers.reshape(total_circles_shape[0] * total_circles_shape[1], -1):
@@ -334,10 +335,11 @@ def new_stitch(pics_dir, reg_box, pic_shape=(2048, 2448), save_dir=None):
     if os.path.exists(os.path.join(save_dir, "stitch_json.json")):
         print("stitch_json is exists, Start stitch img by stitch_json.json")
         draw_img_by_json(pics_dir, os.path.join(save_dir, "stitch_json.json"), save_dir)
-        return os.path.join(save_dir, "img_dist.tif")
+        return os.path.join(save_dir, "img_dist_with_board.tif")
     reg_box = np.asarray(reg_box)
     stitch_json = {"reg_box": reg_box.tolist()}
     M, rect_points = calculate_M(reg_box)
+    stitch_json["pic_shape"] = np.asarray(pic_shape, dtype=int).tolist()
     stitch_json["M"] = M.tolist()
     stitch_json["pics_dir"] = pics_dir
 
@@ -523,7 +525,7 @@ def new_stitch(pics_dir, reg_box, pic_shape=(2048, 2448), save_dir=None):
 
     tifffile.imwrite(os.path.join(save_dir, "new_stitch_img_with_circles.tif"), stitch_img, compression="jpeg")
 
-    return os.path.join(save_dir, "img_dist.tif")
+    return os.path.join(save_dir, "img_dist_with_board.tif")
 
 
 def auto_correct_stitch_json(stitch_json, template_mask=None):
@@ -559,7 +561,7 @@ def auto_correct_stitch_json(stitch_json, template_mask=None):
         error_num = abs(pred_loc[0] - real_loc[0]) + abs(pred_loc[1] - real_loc[1])
 
         print(f"pic_name: {pic_name}    real_loc: {real_loc}    pred_loc: {pred_loc}    error: {error_num}")
-        if error_num > 2 * int(conf.conf.get("match-imgs", "match_range")):
+        if error_num > 1.5 * int(conf.conf.get("match-imgs", "match_range")):
             if template_mask is not None:
                 img_ori = tifffile.imread(os.path.join(stitch_json["pics_dir"], pic_name))
                 img_merge = cv2.cvtColor(img_ori[..., conf.stitch_channal], cv2.COLOR_GRAY2BGR)
@@ -738,10 +740,82 @@ def calculate_std_d(pics_dir, stitch_json):
     return np.median(all_mean_distance)
 
 
+def find_error_pic(error_point, stitch_json):
+    pic_shape = stitch_json["pic_shape"]
+    # 遍历cycle_json中每一个视野的位置，定位error位置的视野序号
+    error_point_x, error_point_y = error_point
+    for index_y_x in stitch_json["all_index_y_x"]:
+        img_name = f"ori_{index_y_x[0]}_{index_y_x[1]}.tif"
+        left_top_loc = stitch_json[img_name][0]
+        if left_top_loc[0] <= error_point_x <= left_top_loc[0] + pic_shape[1] and \
+                left_top_loc[1] <= error_point_y <= left_top_loc[1] + pic_shape[0]:
+            return img_name, left_top_loc
+    raise Exception("Error: Can't find error pic by error point:{}. Check it please!".format(error_point))
+
+
+def draw_part_circle_pic(circle_centers, stitch_json, start_loc, shape=(30, 35)):
+    std_d = stitch_json["std_circles_d"]
+    std_r = int(std_d * 0.4)
+
+    pic_shape = stitch_json["pic_shape"]
+    start_loc = np.asarray(start_loc)
+    end_loc = start_loc + pic_shape[::-1]
+    # 找到开始位置和结束位置最接近的圆心坐标
+    distance_values = np.sum(np.abs(circle_centers - start_loc), axis=2)
+    x_i_start, y_i_start = cv2.minMaxLoc(distance_values)[2][::-1]
+
+    distance_values = np.sum(np.abs(circle_centers - end_loc), axis=2)
+    x_i_end, y_i_end = cv2.minMaxLoc(distance_values)[2][::-1]
+
+    circle_img = np.zeros((*pic_shape, 3), dtype=np.uint8)
+    for x in range(x_i_start, x_i_end+1):
+        for y in range(y_i_start, y_i_end+1):
+            if y % (shape[1] + 1) == 0 or x % (shape[0] + 1) == 0:
+                # 不同块的分割线
+                continue
+            offset_loc = circle_centers[x, y] - start_loc
+            cv2.circle(circle_img, tuple(offset_loc), std_r, (155, 155, 155), 1)
+    return circle_img
+
+
+def correct_img(wrong_point_norm, stitch_json_path):
+    stitch_json = load_json(stitch_json_path)
+    pic_dir = stitch_json["pics_dir"]
+    std_reg_box = stitch_json["std_reg_box"]
+    reg_box = stitch_json["reg_box"]
+    x_width, y_width = (std_reg_box[1][0] - std_reg_box[0][0],
+                        std_reg_box[1][1] - std_reg_box[0][1])
+    # 首先，根据wrong_point的相对位置和decode_img的标准框区域，确定绝对坐标
+    ori_point = (wrong_point_norm[0] * x_width + std_reg_box[0][0],
+                 wrong_point_norm[1] * y_width + std_reg_box[0][1])
+    # 然后根据M将绝对坐标逆变换成实际坐标
+    M = stitch_json["M"]
+    M_inv = np.linalg.inv(M)
+    real_point = np.round(np.dot(M_inv, np.array([*ori_point, 1]))).astype(int)[:2]
+    # 找到错误图像
+    error_img_name, error_img_loc = find_error_pic(real_point, stitch_json)
+    error_img = tifffile.imread(os.path.join(pic_dir, error_img_name))[..., conf.stitch_channal]
+    error_img = cv2.cvtColor(error_img, cv2.COLOR_GRAY2RGB)
+    circle_centers = np.load(stitch_json["std_circles_center_path"])
+    circle_img = draw_part_circle_pic(circle_centers, stitch_json, error_img_loc)
+    # add_img = np.where(circle_img > 0, circle_img, error_img)
+    # show_img(add_img[:500, :500])
+    new_shift = shift_move_show_img(circle_img, error_img, scale_size=(800, 800),
+                                    name=f"correct"
+                                    , center_point=real_point - error_img_loc)
+    if new_shift and new_shift != [0, 0]:
+        correct_loc = error_img_loc + np.asarray(new_shift, dtype=int)
+        # 更新stitch_json.json
+        stitch_json[error_img_name][0] = correct_loc.tolist()
+        stitch_json[error_img_name][1] = 0
+        save_json(stitch_json_path, stitch_json)
+        print(f"correct pic :{error_img_name}, local:{error_img_loc}->{correct_loc.tolist()}")
+
+
 if __name__ == '__main__':
     pass
-    pic_dir = r"E:\biomarker_data\S2000\20230810-20230719-1-V2AB-1-S2000-WW-N-IF-20X.mrxs"
-    reg_box = [[1816, 1940], [36960, 1728], [37184, 36524], [2060, 36744]]
+    pic_dir = r"E:\test\tmp\20230824-20230629-CA31BN06F1-B3-T-11-FG95-IF-20X-20230824-104515139.mrxs"
+    reg_box = [[1836, 2968], [23072, 2852], [23212, 24184], [1948, 24296]]
     stitch_json = cut_and_stitch(pic_dir, reg_box)
 
     # pics_dir = r"E:\Cell_seg_images\20230411-BI10BN04F4-B4-JZL-FG16-20X-Cut"

@@ -88,6 +88,9 @@ class Ui_MainWindow(object):
         self.verticalLayout_7.addWidget(self.widget_2)
         spacerItem = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.verticalLayout_7.addItem(spacerItem)
+        self.correct_match_result = QtWidgets.QPushButton(self.page_file)
+        self.correct_match_result.setObjectName("correct_match_result")
+        self.verticalLayout_7.addWidget(self.correct_match_result)
         self.toolBox.addItem(self.page_file, "")
         self.page_chip_region = QtWidgets.QWidget()
         self.page_chip_region.setGeometry(QtCore.QRect(0, 0, 392, 196))
@@ -139,6 +142,7 @@ class Ui_MainWindow(object):
         self.correct_whole.clicked.connect(MainWindow.correct_whole_cao) # type: ignore
         self.comboBox.currentIndexChanged['int'].connect(MainWindow.choose_channel_show_cao) # type: ignore
         self.new_stitch_channel.clicked.connect(MainWindow.new_stitch_channel_cao) # type: ignore
+        self.correct_match_result.clicked.connect(MainWindow.correct_match_result_cao) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
@@ -158,6 +162,7 @@ class Ui_MainWindow(object):
         self.stitch_chip.setText(_translate("MainWindow", "缝合并裁剪"))
         self.new_stitch_channel.setText(_translate("MainWindow", "带二分镜缝合"))
         self.correct_whole.setText(_translate("MainWindow", "全图校准(需先裁剪)"))
+        self.correct_match_result.setText(_translate("MainWindow", "二分镜缝合校正"))
         self.toolBox.setItemText(self.toolBox.indexOf(self.page_file), _translate("MainWindow", "芯片区域手工识别"))
         self.auto_reg_chip_region.setText(_translate("MainWindow", "自动识别启动"))
         self.toolBox.setItemText(self.toolBox.indexOf(self.page_chip_region), _translate("MainWindow", "芯片区域自动识别"))

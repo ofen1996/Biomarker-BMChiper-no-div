@@ -47,6 +47,9 @@ class Config:
         if self.base_mode == "S2000":
             self.base_size_x = 76
             self.base_size_y = 75
+        elif self.base_mode == "S1000":
+            self.base_size_x = 46
+            self.base_size_y = 46
 
         self.calculate_size = int(self.conf.get("correct-whole-img", "calculate_size"))
         self.out_size = int(self.conf.get("correct-whole-img", "max_out_size"))

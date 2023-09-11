@@ -8,6 +8,7 @@ import errno
 import random
 import cv2
 import numpy as np
+import pyautogui
 from retry import retry
 
 
@@ -198,3 +199,87 @@ def gamma_trans(img, gamma):
 
     # 实现这个映射用的是OpenCV的查表函数
     return cv2.LUT(img, gamma_table)
+
+
+def shift_move_show_img(fixed_pic, var_pic, name=None, scale_size=None, line_width=3, center_point=None):
+    # 取图像中心部分区域对齐，减少计算量，提高流畅度
+    if scale_size:
+        if center_point is None:
+            height, width = fixed_pic.shape[:2]
+            start_x, start_y = int((width - scale_size[0]) / 2), int((height - scale_size[1]) / 2)
+        else:
+            height, width = fixed_pic.shape[:2]
+            # 先对终止边界处理
+            center_point[0] = width - scale_size[0]//2 if center_point[0] + scale_size[0] > width else center_point[0]
+            center_point[1] = height - scale_size[1]//2 if center_point[1] + scale_size[1] > height else center_point[1]
+            # 先对起始界处理
+            start_x = center_point[0] - scale_size[0]//2 if center_point[0] - scale_size[0]//2 > 0 else 0
+            start_y = center_point[1] - scale_size[1]//2 if center_point[1] - scale_size[1]//2 > 0 else 0
+        end_x, end_y = start_x + scale_size[0], start_y + scale_size[1]
+        fixed_pic = fixed_pic[start_y:end_y, start_x:end_x]
+        var_pic = var_pic[start_y:end_y, start_x:end_x]
+
+    shift = np.array([0, 0])
+    l_press = False
+    move_rate = 10  # 移动减速比，图像移动缩减比率
+    tmp_start_pos = None
+
+    def mouse(event, x, y, flags, param):
+        nonlocal shift
+        nonlocal l_press
+        nonlocal move_rate
+        nonlocal tmp_start_pos
+
+        if event == cv2.EVENT_LBUTTONDOWN:
+            l_press = True
+            tmp_start_pos = [x, y]
+            print("start:", x, y, pic[y, x])
+        if event == cv2.EVENT_LBUTTONUP and l_press:
+            if tmp_start_pos:
+                l_press = False
+                tmp_shift = (np.array([x, y]) - tmp_start_pos)//move_rate
+                shift += tmp_shift
+                print(f"shift:{shift}")
+                tmp_start_pos = [0, 0]
+                # print("end:", x, y, pic[y, x])
+                # shift += 1
+        if event == cv2.EVENT_RBUTTONDOWN:
+            param[:] = shift[:]
+            cv2.waitKey(300)
+            pyautogui.press("enter")
+            # cv2.destroyWindow(name)
+        if event == cv2.EVENT_MOUSEMOVE:
+            if l_press:  # 左键按下且移动
+                tmp_loc_x = shift[0] + (x - tmp_start_pos[0])//move_rate
+                tmp_loc_y = shift[1] + (y - tmp_start_pos[1])//move_rate
+
+                # 平移图像
+                shift_M = np.float32([[1, 0, tmp_loc_x], [0, 1, tmp_loc_y]])
+                translated_image = cv2.warpAffine(var_pic, shift_M, (var_pic.shape[1], var_pic.shape[0]))
+                # 叠加显示
+                translated_image = np.where(fixed_pic > 0, fixed_pic, translated_image)
+                # x, y = tmp_loc_x, tmp_loc_y
+                # n_pic = cv2.line(copy.copy(pic), (x, 0), (x, pic.shape[0]), (0, 255, 0), line_width)
+                # n_pic = cv2.line(n_pic, (0, y), (pic.shape[1], y), (0, 255, 0), line_width)
+                cv2.imshow(name, translated_image)
+
+    if not name:
+        name = str(random.random())
+    cv2.namedWindow(name, flags=cv2.WINDOW_GUI_NORMAL)
+    cv2.resizeWindow(name, 800, 600)
+    pic = np.where(fixed_pic > 0, fixed_pic, var_pic)
+    cv2.imshow(name, pic)
+    tmp = []
+    cv2.setMouseCallback(name, mouse, tmp)
+    # cv2.waitKey()
+    # 避免点X后死锁
+    while cv2.getWindowProperty(name, cv2.WND_PROP_VISIBLE) >= 1:
+        # print(cv2.getWindowProperty(name, cv2.WND_PROP_VISIBLE))
+        k = cv2.waitKey(100)
+        if k != -1:
+            break
+    try:
+        cv2.destroyWindow(name)
+    except:
+        pass
+    return tmp

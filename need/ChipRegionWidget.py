@@ -58,6 +58,8 @@ class ChipRegionWidget(QWidget):
         self.draw_argvs['cross_line_len'] = 50
         # 设置实时准心，只有mode1时显示
         self.draw_argvs['curr_mouse'] = [0, 0]
+        # 设置一个临时变量，用于储存mode==2状态下的点选坐标
+        self.draw_argvs['mode_2_point'] = [-1, -1]
         self.channel_show = 0
 
         pass
@@ -221,7 +223,7 @@ class ChipRegionWidget(QWidget):
         # 处理mrxs格式图片
         if image_filename[-4:] == 'MRXS' or image_filename[-4:] == 'mrxs':
             mb = MRXSBase(slide_file=image_filename)
-            img = mb.extract_img_by_level(2)
+            img = mb.extract_img_by_level(0)
         # 图片读取
         else:
             # img = tifffile.imread(self.image_filename, level=0)
@@ -282,7 +284,7 @@ class ChipRegionWidget(QWidget):
             self.mouse_originY = evt.globalY()
             self.isPressed = True
         # 通过鼠标点击来添加分割点
-        if self.mode == 1 and evt.button() == Qt.LeftButton:
+        if self.mode in [1, 2] and evt.button() == Qt.LeftButton:
             # 获取鼠标点击坐标，并转换为原始图片上的坐标
             win_pos = [evt.x(), evt.y()]
             ori_img_pos = self.win_pos_2_ori_img_pos(win_pos)
@@ -293,9 +295,13 @@ class ChipRegionWidget(QWidget):
             if ori_img_pos[1] < 0 or ori_img_pos[1] > self.draw_argvs['zoom_imgs'][-1].size[1]:
                 print('pos out ori img:', ori_img_pos, win_pos)
                 return
-            # 保存坐标点
-            curr_point_index = self.draw_argvs['rect_points_index']
-            self.draw_argvs['rect_points'][curr_point_index][:] = ori_img_pos
+            if self.mode == 1:
+                # 保存坐标点
+                curr_point_index = self.draw_argvs['rect_points_index']
+                self.draw_argvs['rect_points'][curr_point_index][:] = ori_img_pos
+            elif self.mode == 2:
+                # mode == 2 时，临时点选坐标
+                self.draw_argvs['mode_2_point'][:] = ori_img_pos
             # 恢复模式到浏览模式
             self.mode = 0
             # 刷新窗口显示
@@ -462,7 +468,8 @@ class ChipRegionWidget(QWidget):
         print(f"reg_box={reg_box}, desc_box={desc_box}")
 
         tif_file = f"{self.image_filename[:-4]}_chip.tif"
-        cv2.imwrite(tif_file, warped[:,:,[2,1,0]])
+        tifffile.imwrite(tif_file, warped, compression="jpeg")
+        # cv2.imwrite(tif_file, warped[:,:,[2,1,0]])
         return tif_file
 
 

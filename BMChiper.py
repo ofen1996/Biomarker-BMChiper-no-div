@@ -1,4 +1,6 @@
 import sys
+import threading
+import time
 import traceback
 
 import numpy as np
@@ -217,7 +219,8 @@ class ChipRegionMain(QMainWindow, Ui_MainWindow):
             print("请先选择4个点")
             return
         try:
-            corners = np.asarray(self.widget_right.draw_argvs['rect_points']) * 4
+            # corners = np.asarray(self.widget_right.draw_argvs['rect_points']) * 4
+            corners = np.asarray(self.widget_right.draw_argvs['rect_points'])
             print(corners)
 
             # 改变 stitch_channal
@@ -246,6 +249,30 @@ class ChipRegionMain(QMainWindow, Ui_MainWindow):
             return
 
         pass
+
+    def correct_match_result_cao(self):
+        if "correct_match_result" in [thread.name for thread in threading.enumerate()]:
+            print("threading is exists")
+            return
+        self.widget_right.mode = 2
+        thread = threading.Thread(target=correct_match_result, name="correct_match_result")
+        thread.start()
+
+        pass
+
+
+def correct_match_result():
+    tmp = window.widget_right.draw_argvs["mode_2_point"].copy()
+    while window.widget_right.draw_argvs["mode_2_point"] == tmp:
+        time.sleep(0.2)
+    print(window.widget_right.draw_argvs["mode_2_point"])
+    print(window.widget_right.draw_argvs['zoom_imgs'][-1].size[0], window.widget_right.draw_argvs['zoom_imgs'][-1].size[1])
+    wrong_point = window.widget_right.draw_argvs["mode_2_point"]
+    whole_size = window.widget_right.draw_argvs['zoom_imgs'][-1].size[:2]
+    wrong_point_norm = np.array(wrong_point) / whole_size
+    stitch_json_dir = os.path.split(window.widget_right.image_filename)[0]
+    stitch_json_path = os.path.join(stitch_json_dir, "stitch_json.json")
+    match_imgs.correct_img(wrong_point_norm, stitch_json_path)
 
 
 
