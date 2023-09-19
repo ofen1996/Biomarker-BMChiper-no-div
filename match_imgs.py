@@ -816,7 +816,7 @@ if __name__ == '__main__':
     pass
     pic_dir = r"E:\test\tmp\20230824-20230629-CA31BN06F1-B3-T-11-FG95-IF-20X-20230824-104515139.mrxs"
     reg_box = [[1836, 2968], [23072, 2852], [23212, 24184], [1948, 24296]]
-    stitch_json = cut_and_stitch(pic_dir, reg_box)
+    # stitch_json = cut_and_stitch(pic_dir, reg_box)
 
     # pics_dir = r"E:\Cell_seg_images\20230411-BI10BN04F4-B4-JZL-FG16-20X-Cut"
     # stitch_json = load_json(r"E:\test\tmp\20230823-20230309-BK16BN18F6-B4-T-2-FG93-IF-20X-20230823-103731383-Cut-new_stitch\stitch_json.json")

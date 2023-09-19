@@ -10,6 +10,7 @@ class Config:
         self.base_mode = "S1000"
         self.base_size_x = 46
         self.base_size_y = 46
+        self.mrxs_read_level = 0
 
         self.DEBUG = None
         self.use_real_kp_only = None
@@ -50,6 +51,9 @@ class Config:
         elif self.base_mode == "S1000":
             self.base_size_x = 46
             self.base_size_y = 46
+
+        if self.conf.has_option("default", "mrxs_read_level"):
+            self.mrxs_read_level = int(self.conf.get("default", "mrxs_read_level"))
 
         self.calculate_size = int(self.conf.get("correct-whole-img", "calculate_size"))
         self.out_size = int(self.conf.get("correct-whole-img", "max_out_size"))

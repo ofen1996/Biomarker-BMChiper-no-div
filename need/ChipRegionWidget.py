@@ -218,12 +218,12 @@ class ChipRegionWidget(QWidget):
                         random.randint(0, 199))
 
 
-    def read_image(self, image_filename):
+    def read_image(self, image_filename, mrxs_read_level=0):
         self.image_filename = image_filename
         # 处理mrxs格式图片
         if image_filename[-4:] == 'MRXS' or image_filename[-4:] == 'mrxs':
             mb = MRXSBase(slide_file=image_filename)
-            img = mb.extract_img_by_level(0)
+            img = mb.extract_img_by_level(mrxs_read_level)
         # 图片读取
         else:
             # img = tifffile.imread(self.image_filename, level=0)

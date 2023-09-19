@@ -90,6 +90,7 @@ class ChipRegionMain(QMainWindow, Ui_MainWindow):
         self.gridLayout_main.addWidget(self.widget_right, 0, 1, 1, 1)
         self.widget_right.setStyleSheet('#widget_right{background-color:#FF0000;}')
     def open_he_img_cao(self):
+        conf.reload()
         if not isinstance(self.widget_right, ChipRegionWidget):
             self.chip_region_setup_env()
         filename_choose = FileDirBase.open_file(self,'*.tif *.tiff *.mrxs')
@@ -101,7 +102,7 @@ class ChipRegionMain(QMainWindow, Ui_MainWindow):
         else:
             self.stitch_chip.setEnabled(False)
             self.new_stitch_channel.setEnabled(False)
-        self.widget_right.read_image(filename_choose)
+        self.widget_right.read_image(filename_choose, mrxs_read_level=conf.mrxs_read_level)
 
         # 记忆选择的路径
         base_dir = os.path.split(filename_choose)[0]
@@ -149,7 +150,7 @@ class ChipRegionMain(QMainWindow, Ui_MainWindow):
             # camera_resolutions = [(2448, 2048), (2048, 2048)]
             # camera_resolution = camera_resolutions[self.comboBox_camera_type.currentIndex()]
             # print("camera_resolution:" + str(camera_resolution))
-            st_img = StitchImg(self.widget_right.image_filename, corners * 4, self.widget_right.channel_show)
+            st_img = StitchImg(self.widget_right.image_filename, corners * (2**conf.mrxs_read_level), self.widget_right.channel_show)
             new_corners, level_2_path = st_img.cut_and_stitch()
 
             # level_2_path = "./test.tif"
@@ -219,8 +220,8 @@ class ChipRegionMain(QMainWindow, Ui_MainWindow):
             print("请先选择4个点")
             return
         try:
-            # corners = np.asarray(self.widget_right.draw_argvs['rect_points']) * 4
-            corners = np.asarray(self.widget_right.draw_argvs['rect_points'])
+            corners = np.asarray(self.widget_right.draw_argvs['rect_points']) * (2**conf.mrxs_read_level)
+            # corners = np.asarray(self.widget_right.draw_argvs['rect_points'])
             print(corners)
 
             # 改变 stitch_channal
