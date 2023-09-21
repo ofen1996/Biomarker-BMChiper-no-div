@@ -44,14 +44,6 @@ class Config:
         self.conf = configparser.ConfigParser()
         self.conf.read(ini_path, encoding="utf-8")
 
-        self.base_mode = self.conf.get("default", "base_mode")
-        if self.base_mode == "S2000":
-            self.base_size_x = 76
-            self.base_size_y = 75
-        elif self.base_mode == "S1000":
-            self.base_size_x = 46
-            self.base_size_y = 46
-
         if self.conf.has_option("default", "mrxs_read_level"):
             self.mrxs_read_level = int(self.conf.get("default", "mrxs_read_level"))
 
@@ -77,6 +69,18 @@ class Config:
         self.resize_level = int(self.conf.get("stitch", "resize_level"))
         self.camera_resolution = eval(self.conf.get("fov-cut", "camera_resolution"))
         self.if_raise_exception = eval(self.conf.get("fov-cut", "if_raise_exception"))
+
+        self.base_mode = self.conf.get("default", "base_mode")
+        if self.base_mode == "S2000":
+            self.base_size_x = 76
+            self.base_size_y = 75
+        elif self.base_mode == "S1000":
+            self.base_size_x = 46
+            self.base_size_y = 46
+        elif self.base_mode == "S2000-2":
+            self.base_size_x = 101
+            self.base_size_y = 134
+            self.out_size = 30000
 
 
 if os.path.exists("./setting/setting.ini"):

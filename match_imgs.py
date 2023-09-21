@@ -158,10 +158,22 @@ def cut_fov_img(mrxs_path, save_path, camera_resolution=(2448, 2048)):
 
     if len(os.listdir(save_path)) >= FOV_SHAPE[0] * FOV_SHAPE[1]:
         print(save_path, "\n", "it has cuted, skip it.")
+        if conf.base_mode == "S2000-2":
+            # S2000-2图像太大，从源头开始缩减一半尺寸用于计算
+            FOV_PIXES = np.array(FOV_PIXES) // 2
         return FOV_SHAPE[::-1], FOV_PIXES[::-1]
 
     # 先裁剪全图
-    whole_img = np.asarray(slide.read_region((BOUND_X, BOUND_Y), 0, (BOUND_WIDTH, BOUND_HEIGHT)))[..., :3]
+    if conf.base_mode == "S2000-2":
+        # S2000-2图像太大，从源头开始缩减一半尺寸用于计算
+        FOV_PIXES = np.array(FOV_PIXES) // 2
+        BOUND_WIDTH //= 2
+        BOUND_HEIGHT //= 2
+        whole_img = np.asarray(slide.read_region((BOUND_X, BOUND_Y), 1, (BOUND_WIDTH, BOUND_HEIGHT)))[..., :3]
+        whole_img = np.rot90(whole_img, k=2)
+
+    else:
+        whole_img = np.asarray(slide.read_region((BOUND_X, BOUND_Y), 0, (BOUND_WIDTH, BOUND_HEIGHT)))[..., :3]
     # whole_img = binary_pic(whole_img)
     # FOV_PIXES[1] = FOV_PIXES[1]//2
     # FOV_PIXES[0] = FOV_PIXES[0]//2
@@ -357,8 +369,8 @@ def new_stitch(pics_dir, reg_box, pic_shape=(2048, 2448), save_dir=None):
     std_r = int(std_d * 0.4)
     print("std_d :{}".format(std_d))
     # 重新设定whole_img_size
-    whole_img_size = (int(conf.std_edge_size[0] * 2 + std_d * 31 * conf.base_size_x) + 1,
-                      int(conf.std_edge_size[1] * 2 + std_d * 0.5 * np.sqrt(3) * 36 * conf.base_size_y) + 1
+    whole_img_size = (int(conf.std_edge_size[1] * 2 + std_d * 0.5 * np.sqrt(3) * 36 * conf.base_size_y) + 1,
+                      int(conf.std_edge_size[0] * 2 + std_d * 31 * conf.base_size_x) + 1
                       )
     conf.conf.set("match-imgs", "whole_img_size", str(whole_img_size))
     with open(conf.ini_path, "w") as conf_ini:
@@ -446,10 +458,11 @@ def new_stitch(pics_dir, reg_box, pic_shape=(2048, 2448), save_dir=None):
             real_loc = template_start_loc + match_shift
 
             # ### 调试代码####
-            # tmp_circle_shift = std_circle.circles_img[real_loc[1]:real_loc[1]+img_ori.shape[0],
-            #                                           real_loc[0]:real_loc[0]+img_ori.shape[1]]
-            # show_img(img_bin + cv2.cvtColor(tmp_circle_shift, cv2.COLOR_GRAY2BGR))
-
+            # tmp_circle_shift = std_circle.circles_img[real_loc[1]:real_loc[1]+img_merge.shape[0],
+            #                                           real_loc[0]:real_loc[0]+img_merge.shape[1]]
+            # show_img(img_merge + cv2.cvtColor(tmp_circle_shift, cv2.COLOR_GRAY2BGR))
+            # tifffile.imwrite(os.path.join(save_dir, "img_merge.tif"), img_merge)
+            # tifffile.imwrite(os.path.join(save_dir, "template.tif"), template)
             ##############
 
             print("Match ori_{}_{}.tif, div_point:{}, shift:{}, match rate:{}"
@@ -814,9 +827,9 @@ def correct_img(wrong_point_norm, stitch_json_path):
 
 if __name__ == '__main__':
     pass
-    pic_dir = r"E:\test\tmp\20230824-20230629-CA31BN06F1-B3-T-11-FG95-IF-20X-20230824-104515139.mrxs"
-    reg_box = [[1836, 2968], [23072, 2852], [23212, 24184], [1948, 24296]]
-    # stitch_json = cut_and_stitch(pic_dir, reg_box)
+    pic_dir = r"E:\biomarker_data\S2000\20230808-S2000-2-20x.mrxs"
+    reg_box = [[1358, 1964], [28912, 1862], [28966, 38496], [1410, 38594]]
+    stitch_json = cut_and_stitch(pic_dir, reg_box)
 
     # pics_dir = r"E:\Cell_seg_images\20230411-BI10BN04F4-B4-JZL-FG16-20X-Cut"
     # stitch_json = load_json(r"E:\test\tmp\20230823-20230309-BK16BN18F6-B4-T-2-FG93-IF-20X-20230823-103731383-Cut-new_stitch\stitch_json.json")

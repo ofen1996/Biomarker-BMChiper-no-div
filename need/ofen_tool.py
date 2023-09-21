@@ -183,7 +183,7 @@ def my_warpPerspective(src, M, dsize, **kwargs):
         # warped_image = transform.warp(src, np.linalg.inv(M), output_shape=dsize[::-1])
         # return (warped_image * 255).astype(np.uint8)
 
-        scale_rate = 32000 / max_len
+        scale_rate = 20000 / max_len
         scale_img = cv2.resize(src, (int(src.shape[1] * scale_rate), int(src.shape[0] * scale_rate)))
         scale_img = cv2.warpPerspective(scale_img, M, scale_img.shape[:2][::-1], **kwargs)
         return cv2.resize(scale_img, src.shape[:2][::-1])

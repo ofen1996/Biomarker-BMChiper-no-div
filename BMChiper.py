@@ -221,9 +221,16 @@ class ChipRegionMain(QMainWindow, Ui_MainWindow):
             return
         try:
             corners = np.asarray(self.widget_right.draw_argvs['rect_points']) * (2**conf.mrxs_read_level)
+            if conf.base_mode == "S2000-2":
+                # S2000-2图像扫描过程，反着扫描，所以点位反转计算一下
+                whole_size = np.array(self.widget_right.draw_argvs['zoom_imgs'][-1].size) * (2**conf.mrxs_read_level)
+                corners = whole_size - corners
+
+                # S2000-2图像太大，从源头开始缩减一半尺寸用于计算
+                corners = (corners * 0.5).astype(corners.dtype)
             # corners = np.asarray(self.widget_right.draw_argvs['rect_points'])
             print(corners)
-
+            # return
             # 改变 stitch_channal
             if self.widget_right.channel_show != 0:
                 stitch_channel = self.widget_right.channel_show - 1
