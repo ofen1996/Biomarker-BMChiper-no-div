@@ -192,6 +192,61 @@ def cut_fov_img(mrxs_path, save_path, camera_resolution=(2448, 2048)):
     return FOV_SHAPE[::-1], FOV_PIXES[::-1]
 
 
+def cut_fov_img_S2000(mrxs_path, save_path, camera_resolution=(2448, 2048)):
+    if not os.path.exists(save_path):
+        os.mkdir(save_path)
+
+    slide = openslide.OpenSlide(mrxs_path)
+
+    # 非零起始点位置
+    BOUND_X, BOUND_Y = map(int, [slide.properties['openslide.bounds-x'], slide.properties['openslide.bounds-y']])
+    # 视场的长宽像素值
+    BOUND_WIDTH, BOUND_HEIGHT = map(
+        int, [slide.properties['openslide.bounds-width'], slide.properties['openslide.bounds-height']])
+    # 视场数目
+    FOV_COUNT = int(slide.properties['mirax.NONHIERLAYER_0_SECTION.SCANNED_FOV_COUNT'])
+    # 相机固定分辨率
+    CAMERA_RESOLUTION = np.asarray(camera_resolution)
+    # CAMERA_RESOLUTION = np.asarray((2048, 2048))
+    # 视场数目，长，宽。
+    FOV_SHAPE = ((BOUND_WIDTH, BOUND_HEIGHT) // (CAMERA_RESOLUTION + 0.00000001) + 1).astype(int)
+    # 验证计算的视场长宽与视场数目是否对应，如果不对应，说明计算有误，抛错停止
+    if FOV_COUNT % (FOV_SHAPE[0] * FOV_SHAPE[1]) != 0:
+        print("FOV_SHAPE: {}".format(FOV_SHAPE))
+        print("FOV_COUNT: {}".format(FOV_COUNT))
+    # 计算得到每一个视场的像素值尺寸
+    FOV_PIXES = ((BOUND_WIDTH, BOUND_HEIGHT) / FOV_SHAPE).astype(int)
+
+    if len(os.listdir(save_path)) >= FOV_SHAPE[0] * FOV_SHAPE[1]:
+        print(save_path, "\n", "it has cuted, skip it.")
+        return FOV_SHAPE[::-1], FOV_PIXES[::-1]
+
+    # 先裁剪全图
+    # whole_img = np.array(slide.read_region((BOUND_X, BOUND_Y), 0, (BOUND_WIDTH, BOUND_HEIGHT)))
+    # whole_img = whole_img[..., :3]
+    # stable_binary_pic(whole_img)
+
+    for hi in range(FOV_SHAPE[1]):
+        for wi in range(FOV_SHAPE[0]):
+            # select_part = np.asarray((wi, hi))
+            t1 = time.time()
+            # im = np.asarray(slide.read_region((BOUND_X, BOUND_Y) + FOV_PIXES * select_part, 0, FOV_PIXES))
+            tmp_h_start, tmp_w_start = BOUND_Y + hi * FOV_PIXES[1], BOUND_X + wi * FOV_PIXES[0]
+            # im = whole_img[tmp_h_start:tmp_h_start+FOV_PIXES[1], tmp_w_start:tmp_w_start+FOV_PIXES[0]]
+            im = np.array(slide.read_region((tmp_w_start, tmp_h_start), 0, (FOV_PIXES[0], FOV_PIXES[1])))[..., :3]
+            # binary_pic(im)
+            t2 = time.time()
+            # show_img(im)
+            if conf.base_mode == "S2000-2":
+                save_name = "ori_{}_{}.tif".format(FOV_SHAPE[1]-hi-1, FOV_SHAPE[0]-wi-1)
+                tifffile.imwrite(os.path.join(save_path, save_name), np.rot90(im, k=2), compression="jpeg")
+            else:
+                save_name = "ori_{}_{}.tif".format(hi, wi)
+                tifffile.imwrite(os.path.join(save_path, save_name), im, compression="jpeg")
+            t3 = time.time()
+    return FOV_SHAPE[::-1], FOV_PIXES[::-1]
+
+
 class StdCircles:
     def __init__(self, ori_size, shape, d, r, M=None):
         self.circles_img, self.circles_mask, self.circle_centers = self.std_circles(ori_size, shape, d, r,
@@ -395,6 +450,11 @@ def new_stitch(pics_dir, reg_box, pic_shape=(2048, 2448), save_dir=None):
 
     temp_circles_mask = std_circle.circles_mask.copy()
 
+    # 根据全图坐标和 reg_box位置，预测该关键点所在的区域,通过线性拟合后预测位置
+    model = LinearRegression()
+    X = np.array(reg_box)
+    Y = np.asarray([[0, 0], [conf.base_size_x, 0], [conf.base_size_x, conf.base_size_y], [0, conf.base_size_y]])
+
     if not os.path.exists(os.path.join(save_dir, "stitch_json_ori.json")):
         print("Start match stitch_json_ori.json")
 
@@ -425,12 +485,21 @@ def new_stitch(pics_dir, reg_box, pic_shape=(2048, 2448), save_dir=None):
             # show_img(img_merge)
             # 计算max_match_kp在整个图像中的空间坐标
             max_match_kp_loc = [index_x * img.shape[1] + max_match_kp[0], index_y * img.shape[0] + max_match_kp[1]]
-            # 计算max_match_kp相对芯片左上角的坐标
-            max_match_kp_rel = np.asarray(max_match_kp_loc) - reg_box[0]
 
-            # 下面估算预测的关键点在std_mask底板中的位置
-            distance = (np.asarray(reg_box[2]) - reg_box[0]) // np.array([conf.base_size_x, conf.base_size_y])
-            tile_index_x, tile_index_y = np.round(max_match_kp_rel / distance).astype(int)
+            # 根据全图坐标和 reg_box位置，预测该关键点所在的区域,通过线性拟合后预测位置
+            model.fit(X, Y)
+            predect_tile = np.round(model.predict([max_match_kp_loc])).astype(int)
+            tile_index_x, tile_index_y = predect_tile[0]
+            if tile_index_x < 0 or tile_index_y < 0:
+                print("Warnning: ori_{}_{}.tif predect_tile < 0 :{predect_tile}, Skip it.".format(
+                    index_y, index_x, predect_tile))
+                continue
+            # # 计算max_match_kp相对芯片左上角的坐标
+            # max_match_kp_rel = np.asarray(max_match_kp_loc) - reg_box[0]
+            #
+            # # 下面估算预测的关键点在std_mask底板中的位置
+            # distance = (np.asarray(reg_box[2]) - reg_box[0]) // np.array([conf.base_size_x, conf.base_size_y])
+            # tile_index_x, tile_index_y = np.round(max_match_kp_rel / distance).astype(int)
             kp_loc = std_circle.circle_centers[tile_index_x * 31 + 1, tile_index_y * 36 + 1]  # 找到对应块的第一个圆心坐标(x,y)，近似对应kp位置
             # show_img(std_circle.circles_mask[kp_loc[1]:kp_loc[1]+400, kp_loc[0]:kp_loc[0]+400])
 
@@ -627,7 +696,10 @@ def auto_correct_stitch_json(stitch_json, template_mask=None):
 
 def cut_and_stitch(mrxs_path, reg_box):
     pic_dir = mrxs_path.replace(".mrxs", "-Cut")
-    fov_shape, pic_shape = cut_fov_img(mrxs_path, pic_dir, conf.camera_resolution)
+    if "S2000" in conf.base_mode:
+        fov_shape, pic_shape = cut_fov_img_S2000(mrxs_path, pic_dir, conf.camera_resolution)
+    else:
+        fov_shape, pic_shape = cut_fov_img(mrxs_path, pic_dir, conf.camera_resolution)
     print("End cut pic, start stitch pic...")
 
     save_dir = pic_dir + '-new_stitch'
@@ -827,8 +899,8 @@ def correct_img(wrong_point_norm, stitch_json_path):
 
 if __name__ == '__main__':
     pass
-    pic_dir = r"E:\biomarker_data\S2000\20230808-S2000-2-20x.mrxs"
-    reg_box = [[1358, 1964], [28912, 1862], [28966, 38496], [1410, 38594]]
+    pic_dir = r"E:\biomarker_data\S2000\1011-20230915-BF20CN04F5-B-XSPT-1-IF-20X.mrxs"
+    reg_box = [[8296, 71708], [43424, 71484], [43648, 106296], [8520, 106516]]
     stitch_json = cut_and_stitch(pic_dir, reg_box)
 
     # pics_dir = r"E:\Cell_seg_images\20230411-BI10BN04F4-B4-JZL-FG16-20X-Cut"
