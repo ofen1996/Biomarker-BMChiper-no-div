@@ -310,7 +310,13 @@ class StitchImg:
 
         tmp_corners = np.asarray(new_corners) // conf.resize_level
 
-        # 画一下提示点
+        # 如果small_img尺寸>30000多会导致cv2.warpPerspective有问题，缩放至30000
+        max_len = max(small_img.shape)
+        if max_len > 32768:
+            scale_rate = 30000 / max_len
+            small_img = cv2.resize(small_img, (int(small_img.shape[1] * scale_rate), int(small_img.shape[0] * scale_rate)))
+            tmp_corners = np.int0(tmp_corners * scale_rate)
+
         pass
 
         # 计算长宽
