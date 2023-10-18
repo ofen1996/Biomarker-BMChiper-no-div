@@ -491,7 +491,7 @@ def new_stitch(pics_dir, reg_box, pic_shape=(2048, 2448), save_dir=None):
             predect_tile = np.round(model.predict([max_match_kp_loc])).astype(int)
             tile_index_x, tile_index_y = predect_tile[0]
             if tile_index_x < 0 or tile_index_y < 0:
-                print("Warnning: ori_{}_{}.tif predect_tile < 0 :{predect_tile}, Skip it.".format(
+                print("Warnning: ori_{}_{}.tif predect_tile < 0 :{}, Skip it.".format(
                     index_y, index_x, predect_tile))
                 continue
             # # 计算max_match_kp相对芯片左上角的坐标
@@ -694,7 +694,29 @@ def auto_correct_stitch_json(stitch_json, template_mask=None):
     return stitch_json, model
 
 
+# 对CHIP的四个角坐标进行排序
+# 排序后结果举例：[[3064,1800],[53160,1728],[53240,52144],[3136,52216]]
+def sort_reg_box(ori_box):
+    # 先把第一个元素小的放前两个
+    sort_0 = sorted(ori_box)
+    # 按照第2个元素排序
+    tmp_sort_0 = sorted(sort_0[:2], key=lambda x: x[1])
+    tmp_sort_1 = sorted(sort_0[2:], key=lambda x: x[1])
+
+    sort_box = [tmp_sort_0[0], tmp_sort_1[0], tmp_sort_1[1], tmp_sort_0[1]]
+    return sort_box
+
+
 def cut_and_stitch(mrxs_path, reg_box):
+    reg_box = np.array(reg_box)
+    # 使用OpenCV的minAreaRect函数来找到最小外接矩形
+    rect = cv2.minAreaRect(reg_box)
+    # 获取矩形的四个角点
+    box = cv2.boxPoints(rect)
+    box = np.int0(box).tolist()
+
+    reg_box = sort_reg_box(box)
+
     pic_dir = mrxs_path.replace(".mrxs", "-Cut")
     if "S2000" in conf.base_mode:
         fov_shape, pic_shape = cut_fov_img_S2000(mrxs_path, pic_dir, conf.camera_resolution)
