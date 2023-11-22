@@ -3,6 +3,7 @@ import os.path
 import cv2
 import numpy as np
 import openslide
+import scipy
 import skimage.transform
 import tifffile
 from need.ofen_tool import *
@@ -184,10 +185,85 @@ def cut_fov_img(mrxs_path, save_path, camera_resolution=(2448, 2048)):
             # im = np.asarray(slide.read_region((BOUND_X, BOUND_Y) + FOV_PIXES * select_part, 0, FOV_PIXES))
             tmp_h_start, tmp_w_start = hi * FOV_PIXES[1], wi * FOV_PIXES[0]
             im = whole_img[tmp_h_start:tmp_h_start+FOV_PIXES[1], tmp_w_start:tmp_w_start+FOV_PIXES[0]]
+            ### 以下为免疫荧光专用调试代码，需要注释
+            # clahe = cv2.createCLAHE(clipLimit=4.0, tileGridSize=(16, 16))
+            # im[..., conf.stitch_channal] = clahe.apply(im[..., conf.stitch_channal])
+            ####
             t2 = time.time()
             # show_img(im)
             save_name = "ori_{}_{}.tif".format(hi, wi)
             tifffile.imwrite(os.path.join(save_path, save_name), im)
+            t3 = time.time()
+    return FOV_SHAPE[::-1], FOV_PIXES[::-1]
+
+
+def cut_fov_img_tif(tif_path, save_path, camera_resolution=(1920, 1440)):
+    if not os.path.exists(save_path):
+        os.mkdir(save_path)
+
+    FOV_PIXES = camera_resolution[::-1]  # 因为海德星的图像旋转了90°，所以高和宽换一下
+
+    whole_img = tifffile.imread(tif_path)
+
+    FOV_SHAPE = (np.asarray(whole_img.shape[:2][::-1]) / FOV_PIXES).astype(int)
+
+    if len(os.listdir(save_path)) >= FOV_SHAPE[0] * FOV_SHAPE[1]:
+        print(save_path, "\n", "it has cuted, skip it.")
+        return FOV_SHAPE[::-1], FOV_PIXES[::-1]
+
+    for hi in range(FOV_SHAPE[1]):
+        for wi in range(FOV_SHAPE[0]):
+            # select_part = np.asarray((wi, hi))
+            t1 = time.time()
+            # im = np.asarray(slide.read_region((BOUND_X, BOUND_Y) + FOV_PIXES * select_part, 0, FOV_PIXES))
+            tmp_h_start, tmp_w_start = hi * FOV_PIXES[1], wi * FOV_PIXES[0]
+            im = whole_img[tmp_h_start:tmp_h_start+FOV_PIXES[1], tmp_w_start:tmp_w_start+FOV_PIXES[0]]
+            ### 以下为免疫荧光专用调试代码，需要注释
+            # clahe = cv2.createCLAHE(clipLimit=4.0, tileGridSize=(16, 16))
+            # im[..., conf.stitch_channal] = clahe.apply(im[..., conf.stitch_channal])
+            ####
+            t2 = time.time()
+            # show_img(im)
+            save_name = "ori_{}_{}.tif".format(hi, wi)
+            tifffile.imwrite(os.path.join(save_path, save_name), im, compression='jpeg')
+            # tifffile.imwrite(os.path.join(save_path, save_name), im)
+            t3 = time.time()
+    return FOV_SHAPE[::-1], FOV_PIXES[::-1]
+
+
+def cut_fov_img_haidexing(svs_path, save_path, camera_resolution=(2448, 2048)):
+    if not os.path.exists(save_path):
+        os.mkdir(save_path)
+
+    FOV_PIXES = camera_resolution[::-1]  # 因为海德星的图像旋转了90°，所以高和宽换一下
+
+    slide = openslide.OpenSlide(svs_path)
+
+    FOV_SHAPE = (np.asarray(slide.level_dimensions[0]) / FOV_PIXES).astype(int)
+
+    if len(os.listdir(save_path)) >= FOV_SHAPE[0] * FOV_SHAPE[1]:
+        print(save_path, "\n", "it has cuted, skip it.")
+        return FOV_SHAPE[::-1], FOV_PIXES[::-1]
+
+    whole_img = np.asarray(slide.read_region((0, 0), level=0, size=slide.level_dimensions[0]))[..., :3]
+    whole_img = np.rot90(whole_img, -1)  # 因为海德星的图像旋转了90°
+
+    for hi in range(FOV_SHAPE[1]):
+        for wi in range(FOV_SHAPE[0]):
+            # select_part = np.asarray((wi, hi))
+            t1 = time.time()
+            # im = np.asarray(slide.read_region((BOUND_X, BOUND_Y) + FOV_PIXES * select_part, 0, FOV_PIXES))
+            tmp_h_start, tmp_w_start = hi * FOV_PIXES[1], wi * FOV_PIXES[0]
+            im = whole_img[tmp_h_start:tmp_h_start+FOV_PIXES[1], tmp_w_start:tmp_w_start+FOV_PIXES[0]]
+            ### 以下为免疫荧光专用调试代码，需要注释
+            # clahe = cv2.createCLAHE(clipLimit=4.0, tileGridSize=(16, 16))
+            # im[..., conf.stitch_channal] = clahe.apply(im[..., conf.stitch_channal])
+            ####
+            t2 = time.time()
+            # show_img(im)
+            save_name = "ori_{}_{}.tif".format(hi, wi)
+            tifffile.imwrite(os.path.join(save_path, save_name), im, compression='jpeg')
+            # tifffile.imwrite(os.path.join(save_path, save_name), im)
             t3 = time.time()
     return FOV_SHAPE[::-1], FOV_PIXES[::-1]
 
@@ -406,6 +482,26 @@ def new_stitch(pics_dir, reg_box, pic_shape=(2048, 2448), save_dir=None):
     reg_box = np.asarray(reg_box)
     stitch_json = {"reg_box": reg_box.tolist()}
     M, rect_points = calculate_M(reg_box)
+    # #######博奥###############
+    # M = [
+    #     [
+    #         0.99998629,
+    #         -0.00523596,
+    #         5.03639486
+    #     ],
+    #     [
+    #         0.00523596,
+    #         0.99998629,
+    #         -3.75673452
+    #     ],
+    #     [
+    #         0,
+    #         0,
+    #         1.0
+    #     ]
+    # ]
+    # M = np.array(M)
+    # #####################
     stitch_json["pic_shape"] = np.asarray(pic_shape, dtype=int).tolist()
     stitch_json["M"] = M.tolist()
     stitch_json["pics_dir"] = pics_dir
@@ -420,7 +516,7 @@ def new_stitch(pics_dir, reg_box, pic_shape=(2048, 2448), save_dir=None):
     # std_d = 14.83
     # std_d = 14.836363636363636
     std_d = calculate_std_d(pics_dir, stitch_json)
-    # std_d = 17.565
+    # std_d = 4.48249
     std_r = int(std_d * 0.4)
     print("std_d :{}".format(std_d))
     # 重新设定whole_img_size
@@ -717,11 +813,18 @@ def cut_and_stitch(mrxs_path, reg_box):
 
     reg_box = sort_reg_box(box)
 
-    pic_dir = mrxs_path.replace(".mrxs", "-Cut")
-    if "S2000" in conf.base_mode:
-        fov_shape, pic_shape = cut_fov_img_S2000(mrxs_path, pic_dir, conf.camera_resolution)
-    else:
-        fov_shape, pic_shape = cut_fov_img(mrxs_path, pic_dir, conf.camera_resolution)
+    if mrxs_path.endswith(".mrxs"):
+        pic_dir = mrxs_path.replace(".mrxs", "-Cut")
+        if "S2000" in conf.base_mode:
+            fov_shape, pic_shape = cut_fov_img_S2000(mrxs_path, pic_dir, conf.camera_resolution)
+        else:
+            fov_shape, pic_shape = cut_fov_img(mrxs_path, pic_dir, conf.camera_resolution)
+    elif mrxs_path.endswith('.svs'):
+        pic_dir = mrxs_path.replace(".svs", "-Cut")
+        fov_shape, pic_shape = cut_fov_img_haidexing(mrxs_path, pic_dir)
+    elif mrxs_path.endswith('.tif'):
+        pic_dir = mrxs_path.replace(".tif", "-Cut")
+        fov_shape, pic_shape = cut_fov_img_tif(mrxs_path, pic_dir)
     print("End cut pic, start stitch pic...")
 
     save_dir = pic_dir + '-new_stitch'
@@ -771,6 +874,7 @@ def draw_img_by_json(pics_dir, stitch_json_path, save_dir):
         # sub_stitch[:, :, :] = np.where(tmp_mask, img_crop, sub_stitch)
         # show_img(sub_stitch)
         sub_stitch[:, :, :] = merge_two_img(sub_stitch, img_crop)
+        # sub_stitch[:, :, :] = scipy.ndimage.rotate(img_crop, -0.3)
         # show_img(sub_stitch)
         # sub_stitch[:, :, :] = cv2.addWeighted(sub_stitch, 1, img_crop, 1, 0)
 
@@ -921,8 +1025,8 @@ def correct_img(wrong_point_norm, stitch_json_path):
 
 if __name__ == '__main__':
     pass
-    pic_dir = r"E:\biomarker_data\S2000\1011-20230915-BF20CN04F5-B-XSPT-1-IF-20X.mrxs"
-    reg_box = [[8296, 71708], [43424, 71484], [43648, 106296], [8520, 106516]]
+    pic_dir = r"E:\test\tmp\merge_img.tif"
+    reg_box = [[625, 700], [24083, 705], [24076, 24261], [628, 24262]]
     stitch_json = cut_and_stitch(pic_dir, reg_box)
 
     # pics_dir = r"E:\Cell_seg_images\20230411-BI10BN04F4-B4-JZL-FG16-20X-Cut"
@@ -932,4 +1036,3 @@ if __name__ == '__main__':
     # img=r"E:\biomarker_data\S2000\20230810-20230719-1-V2AB-1-S2000-WW-N-IF-20X-Cut\ori_9_14.tif"
     # img = tifffile.imread(img)
     # a = find_distance(img)
-

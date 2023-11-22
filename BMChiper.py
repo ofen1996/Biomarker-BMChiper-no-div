@@ -93,15 +93,18 @@ class ChipRegionMain(QMainWindow, Ui_MainWindow):
         conf.reload()
         if not isinstance(self.widget_right, ChipRegionWidget):
             self.chip_region_setup_env()
-        filename_choose = FileDirBase.open_file(self,'*.tif *.tiff *.mrxs')
+        filename_choose = FileDirBase.open_file(self,'*.tif *.tiff *.mrxs *.svs')
         if filename_choose is None:
             return
         if filename_choose.endswith(".mrxs"):
             self.stitch_chip.setEnabled(True)
             self.new_stitch_channel.setEnabled(True)
+        elif filename_choose.endswith(".svs"):
+            self.stitch_chip.setEnabled(False)
+            self.new_stitch_channel.setEnabled(True)
         else:
             self.stitch_chip.setEnabled(False)
-            self.new_stitch_channel.setEnabled(False)
+            self.new_stitch_channel.setEnabled(True)
         self.widget_right.read_image(filename_choose, mrxs_read_level=conf.mrxs_read_level)
 
         # 记忆选择的路径
@@ -220,7 +223,13 @@ class ChipRegionMain(QMainWindow, Ui_MainWindow):
             print("请先选择4个点")
             return
         try:
-            corners = np.asarray(self.widget_right.draw_argvs['rect_points']) * (2**conf.mrxs_read_level)
+            if self.widget_right.image_filename.endswith('.svs'):
+                # 海德星的倍率是4的倍数
+                corners = np.asarray(self.widget_right.draw_argvs['rect_points']) * (4 ** conf.mrxs_read_level)
+            if self.widget_right.image_filename.endswith('.tif'):
+                corners = np.asarray(self.widget_right.draw_argvs['rect_points'])
+            else:
+                corners = np.asarray(self.widget_right.draw_argvs['rect_points']) * (2**conf.mrxs_read_level)
             if conf.base_mode == "S2000-2":
                 # S2000-2图像扫描过程，反着扫描，所以点位反转计算一下
                 whole_size = np.array(self.widget_right.draw_argvs['zoom_imgs'][-1].size) * (2**conf.mrxs_read_level)

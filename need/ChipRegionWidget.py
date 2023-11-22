@@ -1,4 +1,6 @@
 import sys
+
+import openslide
 from PyQt5 import QtWidgets
 from PyQt5.Qt import *
 from PyQt5.QtGui import *
@@ -224,6 +226,11 @@ class ChipRegionWidget(QWidget):
         if image_filename[-4:] == 'MRXS' or image_filename[-4:] == 'mrxs':
             mb = MRXSBase(slide_file=image_filename)
             img = mb.extract_img_by_level(mrxs_read_level)
+        elif image_filename[-3:] == 'SVS' or image_filename[-3:] == 'svs':
+            slide = openslide.OpenSlide(image_filename)
+            img = slide.read_region((0, 0), level=mrxs_read_level, size=slide.level_dimensions[mrxs_read_level])
+            img = np.rot90(img, -1)
+            img = Image.fromarray(img)
         # 图片读取
         else:
             # img = tifffile.imread(self.image_filename, level=0)
