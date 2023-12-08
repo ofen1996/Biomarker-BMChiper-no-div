@@ -10,6 +10,9 @@ class Config:
         self.base_mode = "S1000"
         self.base_size_x = 46
         self.base_size_y = 46
+
+        self.barcode_size_x = 30
+        self.barcode_size_y = 35
         self.mrxs_read_level = 0
 
         self.DEBUG = None
@@ -81,6 +84,12 @@ class Config:
             self.base_size_x = 101
             self.base_size_y = 134
             self.out_size = 30000
+        elif self.base_mode == "S3000":
+            self.barcode_size_x = 45
+            self.barcode_size_y = 51
+            self.base_size_x = 42
+            self.base_size_y = 43
+
 
 
 if os.path.exists("./setting/setting.ini"):

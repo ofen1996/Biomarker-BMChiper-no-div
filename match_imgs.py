@@ -188,6 +188,8 @@ def cut_fov_img(mrxs_path, save_path, camera_resolution=(2448, 2048)):
             ### 以下为免疫荧光专用调试代码，需要注释
             # clahe = cv2.createCLAHE(clipLimit=4.0, tileGridSize=(16, 16))
             # im[..., conf.stitch_channal] = clahe.apply(im[..., conf.stitch_channal])
+            # im[..., conf.stitch_channal] = gray_enhance(im[..., conf.stitch_channal], black=93, white=119, gamma=1.37)
+
             ####
             t2 = time.time()
             # show_img(im)
@@ -329,7 +331,8 @@ class StdCircles:
                                                                                     tile_limit=(conf.base_size_x,
                                                                                                 conf.base_size_y))
         self.reg_box = [self.circle_centers[0, 0].tolist(),
-                        self.circle_centers[(30 + 1) * conf.base_size_x, (35 + 1) * conf.base_size_y].tolist()]
+                        self.circle_centers[(conf.barcode_size_x + 1) * conf.base_size_x,
+                                            (conf.barcode_size_y + 1) * conf.base_size_y].tolist()]
         self.reg_box[0][0] += round(d//2)
         self.reg_box[1][0] += round(d//2)
 
@@ -353,21 +356,24 @@ class StdCircles:
         # cv2.imwrite("edge_rect.tif", self.edge_rect)
 
         # 计算首个分割点位置
-        temp_delta_y = (self.circle_centers[30, 37][1] - self.circle_centers[30, 35][1]) // 2
-        temp_delta_x = (self.circle_centers[32, 34][0] - self.circle_centers[30, 35][0]) // 2
-        self.std_first_div_point = (self.circle_centers[30, 35] + (temp_delta_x, temp_delta_y))[::-1]
+        temp_delta_y = (self.circle_centers[conf.barcode_size_x, conf.barcode_size_y + 2][1] -
+                        self.circle_centers[conf.barcode_size_x, conf.barcode_size_y][1]) // 2
+        temp_delta_x = (self.circle_centers[conf.barcode_size_x + 2, conf.barcode_size_y - 1][0] -
+                        self.circle_centers[conf.barcode_size_x, conf.barcode_size_y][0]) // 2
+        self.std_first_div_point = (self.circle_centers[conf.barcode_size_x, conf.barcode_size_y] + (temp_delta_x, temp_delta_y))[::-1]
         # self.std_first_div_point = (self.circle_centers[30, 35] + (26, 30))[::-1]
 
         # 标准单个区域模板
         # 先计算首个分割点的对角点位置
-        tmp_corner_div_point = (self.circle_centers[61, 71] + (temp_delta_x, temp_delta_y))[::-1]
+        tmp_corner_div_point = (self.circle_centers[conf.barcode_size_x*2+1, conf.barcode_size_y*2+1] + (temp_delta_x, temp_delta_y))[::-1]
         # print(tmp_corner_div_point - self.std_first_div_point)
         self.std_mask_size = (tmp_corner_div_point - self.std_first_div_point).tolist()
         # self.std_mask_size = [1081, 1076]
         # conf.std_distance = self.std_mask_size[0]
         self.std_mask = self.circles_img[self.std_first_div_point[0]:self.std_first_div_point[0] + self.std_mask_size[0],
                                          self.std_first_div_point[1]:self.std_first_div_point[1] + self.std_mask_size[1]]
-        self.std_mask_centers = self.circle_centers[32: 32 + 30, 37: 37 + 35] - self.std_first_div_point[::-1]
+        self.std_mask_centers = self.circle_centers[conf.barcode_size_x + 2: conf.barcode_size_x + 2 + conf.barcode_size_x,
+                                                    conf.barcode_size_y + 2: conf.barcode_size_y + 2 + conf.barcode_size_y] - self.std_first_div_point[::-1]
 
 
     @staticmethod
@@ -411,8 +417,8 @@ class StdCircles:
                 if y >= (shape[1] + 1) * tile_limit[1] - 5 and x <= 5:
                     # 左下角缺口
                     continue
-                circles_mask = cv2.circle(circles_mask, tuple(tmp_center), r, int(255 * rate), -1)
-                # circles_mask = cv2.circle(circles_mask, tuple(tmp_center), r//3, 0, -1)
+                circles_mask = cv2.circle(circles_mask, tuple(tmp_center), r+3, int(255 * rate), -1)
+                # circles_mask = cv2.circle(circles_mask, tuple(tmp_center), r-3, int(255 * rate * 0.3), -1)
                 circles_img = cv2.circle(circles_img, tuple(tmp_center), r, 255, 1)
         # print(circle_centers)
         # for center in circle_centers.reshape(total_circles_shape[0] * total_circles_shape[1], -1):
@@ -420,6 +426,7 @@ class StdCircles:
         #     circles_img = cv2.circle(circles_img, tuple(center), r, 255, 1)
         # show_img(circles_img)
         # show_img(circles_mask)
+        circles_mask = cv2.erode(circles_mask, cv2.getStructuringElement(cv2.MORPH_ERODE, (3, 3)))
         circles_mask = cv2.bitwise_not(circles_mask)
         return [circles_img[:ori_size[0], :ori_size[1]],
                 circles_mask[:ori_size[0], :ori_size[1]],
@@ -520,15 +527,15 @@ def new_stitch(pics_dir, reg_box, pic_shape=(2048, 2448), save_dir=None):
     std_r = int(std_d * 0.4)
     print("std_d :{}".format(std_d))
     # 重新设定whole_img_size
-    whole_img_size = (int(conf.std_edge_size[1] * 2 + std_d * 0.5 * np.sqrt(3) * 36 * conf.base_size_y) + 1,
-                      int(conf.std_edge_size[0] * 2 + std_d * 31 * conf.base_size_x) + 1
+    whole_img_size = (int(conf.std_edge_size[1] * 2 + std_d * 0.5 * np.sqrt(3) * (conf.barcode_size_y + 1) * conf.base_size_y) + 1,
+                      int(conf.std_edge_size[0] * 2 + std_d * (conf.barcode_size_x + 1) * conf.base_size_x) + 1
                       )
     conf.conf.set("match-imgs", "whole_img_size", str(whole_img_size))
     with open(conf.ini_path, "w") as conf_ini:
         conf.conf.write(conf_ini)
     conf.whole_img_size = whole_img_size
 
-    std_circle = StdCircles(conf.whole_img_size, (30, 35), std_d, std_r, M=M)
+    std_circle = StdCircles(conf.whole_img_size, (conf.barcode_size_x, conf.barcode_size_y), std_d, std_r, M=M)
     stitch_json["std_reg_box"] = std_circle.reg_box
     stitch_json["std_circles_d"] = std_d
     stitch_json["std_circles_center_path"] = os.path.join(save_dir, "circle_centers.npy")
@@ -596,7 +603,8 @@ def new_stitch(pics_dir, reg_box, pic_shape=(2048, 2448), save_dir=None):
             # # 下面估算预测的关键点在std_mask底板中的位置
             # distance = (np.asarray(reg_box[2]) - reg_box[0]) // np.array([conf.base_size_x, conf.base_size_y])
             # tile_index_x, tile_index_y = np.round(max_match_kp_rel / distance).astype(int)
-            kp_loc = std_circle.circle_centers[tile_index_x * 31 + 1, tile_index_y * 36 + 1]  # 找到对应块的第一个圆心坐标(x,y)，近似对应kp位置
+            kp_loc = std_circle.circle_centers[tile_index_x * (conf.barcode_size_x+1) + 1,
+                                               tile_index_y * (conf.barcode_size_y+1) + 1]  # 找到对应块的第一个圆心坐标(x,y)，近似对应kp位置
             # show_img(std_circle.circles_mask[kp_loc[1]:kp_loc[1]+400, kp_loc[0]:kp_loc[0]+400])
 
             # 从mask里面截取模板template，然后精准匹配
@@ -890,7 +898,7 @@ def draw_img_by_json(pics_dir, stitch_json_path, save_dir):
                                std_circle_reg_box[0][0]:std_circle_reg_box[1][0]]
 
     if img_dist.shape[0] > conf.out_size:
-        out_size_rate_w_h = (31*2*conf.base_size_x)/(36*np.sqrt(3)*conf.base_size_y)
+        out_size_rate_w_h = ((conf.barcode_size_x+1)*2*conf.base_size_x)/((conf.barcode_size_y+1)*np.sqrt(3)*conf.base_size_y)
         img_dist = cv2.resize(img_dist, (int(conf.out_size * out_size_rate_w_h), conf.out_size))
 
     tifffile.imwrite(os.path.join(save_dir, "img_dist.tif"),
@@ -922,7 +930,7 @@ def find_distance(img, M=None, conv_len=20, peaks_threshold=0.25, peaks_min_dist
     fft_signal = abs(np.fft.fft(x_sum))
     # 控制数据范围，避免离谱数据
     # fft_signal[0] = 0
-    fft_signal[:len(x_sum)//10] = 0
+    fft_signal[:len(x_sum)//12] = 0
     fft_signal[-len(x_sum)//2:] = 0
 
     # import matplotlib.pyplot as plt
@@ -964,7 +972,7 @@ def find_error_pic(error_point, stitch_json):
     raise Exception("Error: Can't find error pic by error point:{}. Check it please!".format(error_point))
 
 
-def draw_part_circle_pic(circle_centers, stitch_json, start_loc, shape=(30, 35)):
+def draw_part_circle_pic(circle_centers, stitch_json, start_loc, shape=(conf.barcode_size_x, conf.barcode_size_y)):
     std_d = stitch_json["std_circles_d"]
     std_r = int(std_d * 0.4)
 
@@ -1014,6 +1022,8 @@ def correct_img(wrong_point_norm, stitch_json_path):
     new_shift = shift_move_show_img(circle_img, error_img, scale_size=(800, 800),
                                     name=f"correct"
                                     , center_point=real_point - error_img_loc)
+    # tifffile.imwrite(r"E:\test\S3000\S3000-20X-MC-Cut-new_stitch\circle.tif", circle_img)
+    # tifffile.imwrite(r"E:\test\S3000\S3000-20X-MC-Cut-new_stitch\sub.tif", error_img)
     if new_shift and new_shift != [0, 0]:
         correct_loc = error_img_loc + np.asarray(new_shift, dtype=int)
         # 更新stitch_json.json
@@ -1025,14 +1035,14 @@ def correct_img(wrong_point_norm, stitch_json_path):
 
 if __name__ == '__main__':
     pass
-    pic_dir = r"E:\test\tmp\merge_img.tif"
-    reg_box = [[625, 700], [24083, 705], [24076, 24261], [628, 24262]]
+    pic_dir = r"E:\test\S3000\1129-S3000-SN-40X.mrxs"
+    reg_box = [[2872, 3048], [44560, 2828], [44844, 44792], [3128, 45040]]
     stitch_json = cut_and_stitch(pic_dir, reg_box)
 
     # pics_dir = r"E:\Cell_seg_images\20230411-BI10BN04F4-B4-JZL-FG16-20X-Cut"
     # stitch_json = load_json(r"E:\test\tmp\20230823-20230309-BK16BN18F6-B4-T-2-FG93-IF-20X-20230823-103731383-Cut-new_stitch\stitch_json.json")
     # a = calculate_std_d(pics_dir, stitch_json)
 
-    # img=r"E:\biomarker_data\S2000\20230810-20230719-1-V2AB-1-S2000-WW-N-IF-20X-Cut\ori_9_14.tif"
+    # img=r"E:\test\S3000\1129-S3000-SN-40X-Cut\ori_2_20.tif"
     # img = tifffile.imread(img)
     # a = find_distance(img)

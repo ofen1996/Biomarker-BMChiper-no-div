@@ -24,7 +24,7 @@ except:
 # height: HE图片的高
 def cal_zoom_rate(width, height):
     std_width = 1000
-    std_height = std_width / (conf.base_size_x * 31) * (conf.base_size_y * 36 * np.sqrt(3) / 2.0)
+    std_height = std_width / (conf.base_size_x * (conf.barcode_size_x+1)) * (conf.base_size_y * (conf.barcode_size_y+1) * np.sqrt(3) / 2.0)
     if std_width / std_height > width / height:
         scale = width / std_width
     else:
@@ -35,13 +35,13 @@ def cal_zoom_rate(width, height):
 def gen_std_board_loc(zoom_scale):
     img_width = 1000
     std_kp_loc = np.zeros((conf.base_size_x - 1, conf.base_size_y - 1, 2), dtype=float)
-    std_w = 1.0 * img_width / conf.base_size_x / 31 * zoom_scale
+    std_w = 1.0 * img_width / conf.base_size_x / (conf.barcode_size_x+1) * zoom_scale
     std_h = std_w * np.sqrt(3) / 2
 
     for h in range(conf.base_size_y - 1):
         for w in range(conf.base_size_x - 1):
-            h_loc = (h + 1) * 36 * std_h
-            w_loc = (w + 1) * 31 * std_w - std_w / 2  # 一定是偶数行
+            h_loc = (h + 1) * (conf.barcode_size_y+1) * std_h
+            w_loc = (w + 1) * (conf.barcode_size_x+1) * std_w - std_w / 2  # 一定是偶数行
             std_kp_loc[w, h] = w_loc, h_loc
     return std_kp_loc, (std_w, std_h)
 
@@ -49,17 +49,17 @@ def gen_std_board_loc(zoom_scale):
 def gen_std_board_img(width, height, std_kp_loc=None, save_dir=None, base_img=None, mask_color=(255, 255, 255)):
     zoom_scale = cal_zoom_rate(width, height)
     img_width = 1000
-    std_w = 1.0 * img_width / conf.base_size_x / 31 * zoom_scale
-    std_h = std_w * np.sqrt(3) / 2
+    std_w = 1.0 * img_width / conf.base_size_x / (conf.barcode_size_x+1) * zoom_scale
+    std_h = std_w * 0.5 * 3 ** 0.5
 
     radius = round(std_w * 0.618 / 2) if round(std_w * 0.618 / 2) > 1 else 1
     if base_img is None:
         std_board = np.zeros((height, width, 3), dtype=np.uint8)
     else:
         std_board = base_img
-    for h in range(conf.base_size_y * 36):
-        for w in range(conf.base_size_x * 31):
-            if h % 36 == 0 or w % 31 == 0:
+    for h in range(conf.base_size_y * (conf.barcode_size_y+1)):
+        for w in range(conf.base_size_x * (conf.barcode_size_x+1)):
+            if h % (conf.barcode_size_y+1) == 0 or w % (conf.barcode_size_x+1) == 0:
                 continue  # 边界点跳过
             tmp_w = w * std_w
             tmp_h = h * std_h

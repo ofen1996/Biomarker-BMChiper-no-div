@@ -283,3 +283,12 @@ def shift_move_show_img(fixed_pic, var_pic, name=None, scale_size=None, line_wid
     except:
         pass
     return tmp
+
+
+def gray_enhance(gray, black=2, white=70, gamma=1.69):
+    gray = np.where(gray < black, black, gray)
+    gray = np.where(gray > white, white, gray)
+    gray = np.power((gray - black) / (white - black), 1.0 / gamma)
+    gray = np.round(gray * 255.0)
+    gray = np.array(gray, dtype='uint8')
+    return gray
