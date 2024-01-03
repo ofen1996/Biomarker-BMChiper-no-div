@@ -199,7 +199,7 @@ def cut_fov_img(mrxs_path, save_path, camera_resolution=(2448, 2048)):
     return FOV_SHAPE[::-1], FOV_PIXES[::-1]
 
 
-def cut_fov_img_tif(tif_path, save_path, camera_resolution=(1920, 1440)):
+def cut_fov_img_tif(tif_path, save_path, camera_resolution=(1024, 1224)):
     if not os.path.exists(save_path):
         os.mkdir(save_path)
 
@@ -227,7 +227,7 @@ def cut_fov_img_tif(tif_path, save_path, camera_resolution=(1920, 1440)):
             t2 = time.time()
             # show_img(im)
             save_name = "ori_{}_{}.tif".format(hi, wi)
-            tifffile.imwrite(os.path.join(save_path, save_name), im, compression='jpeg')
+            tifffile.imwrite(os.path.join(save_path, save_name), im, compression='LZW')
             # tifffile.imwrite(os.path.join(save_path, save_name), im)
             t3 = time.time()
     return FOV_SHAPE[::-1], FOV_PIXES[::-1]
@@ -264,7 +264,7 @@ def cut_fov_img_haidexing(svs_path, save_path, camera_resolution=(2448, 2048)):
             t2 = time.time()
             # show_img(im)
             save_name = "ori_{}_{}.tif".format(hi, wi)
-            tifffile.imwrite(os.path.join(save_path, save_name), im, compression='jpeg')
+            tifffile.imwrite(os.path.join(save_path, save_name), im, compression='LZW')
             # tifffile.imwrite(os.path.join(save_path, save_name), im)
             t3 = time.time()
     return FOV_SHAPE[::-1], FOV_PIXES[::-1]
@@ -317,10 +317,10 @@ def cut_fov_img_S2000(mrxs_path, save_path, camera_resolution=(2448, 2048)):
             # show_img(im)
             if conf.base_mode == "S2000-2":
                 save_name = "ori_{}_{}.tif".format(FOV_SHAPE[1]-hi-1, FOV_SHAPE[0]-wi-1)
-                tifffile.imwrite(os.path.join(save_path, save_name), np.rot90(im, k=2), compression="jpeg")
+                tifffile.imwrite(os.path.join(save_path, save_name), np.rot90(im, k=2), compression="LZW")
             else:
                 save_name = "ori_{}_{}.tif".format(hi, wi)
-                tifffile.imwrite(os.path.join(save_path, save_name), im, compression="jpeg")
+                tifffile.imwrite(os.path.join(save_path, save_name), im, compression="LZW")
             t3 = time.time()
     return FOV_SHAPE[::-1], FOV_PIXES[::-1]
 
@@ -417,7 +417,7 @@ class StdCircles:
                 if y >= (shape[1] + 1) * tile_limit[1] - 5 and x <= 5:
                     # 左下角缺口
                     continue
-                circles_mask = cv2.circle(circles_mask, tuple(tmp_center), r+3, int(255 * rate), -1)
+                circles_mask = cv2.circle(circles_mask, tuple(tmp_center), r+r-1, int(255 * rate), -1)
                 # circles_mask = cv2.circle(circles_mask, tuple(tmp_center), r-3, int(255 * rate * 0.3), -1)
                 circles_img = cv2.circle(circles_img, tuple(tmp_center), r, 255, 1)
         # print(circle_centers)
@@ -426,7 +426,7 @@ class StdCircles:
         #     circles_img = cv2.circle(circles_img, tuple(center), r, 255, 1)
         # show_img(circles_img)
         # show_img(circles_mask)
-        circles_mask = cv2.erode(circles_mask, cv2.getStructuringElement(cv2.MORPH_ERODE, (3, 3)))
+        circles_mask = cv2.erode(circles_mask, cv2.getStructuringElement(cv2.MORPH_ERODE, (r-1, r-1)))
         circles_mask = cv2.bitwise_not(circles_mask)
         return [circles_img[:ori_size[0], :ori_size[1]],
                 circles_mask[:ori_size[0], :ori_size[1]],
@@ -823,10 +823,11 @@ def cut_and_stitch(mrxs_path, reg_box):
 
     if mrxs_path.endswith(".mrxs"):
         pic_dir = mrxs_path.replace(".mrxs", "-Cut")
-        if "S2000" in conf.base_mode:
-            fov_shape, pic_shape = cut_fov_img_S2000(mrxs_path, pic_dir, conf.camera_resolution)
-        else:
-            fov_shape, pic_shape = cut_fov_img(mrxs_path, pic_dir, conf.camera_resolution)
+        fov_shape, pic_shape = cut_fov_img_S2000(mrxs_path, pic_dir, conf.camera_resolution)
+        # if "S2000" in conf.base_mode or "S3000" in conf.base_mode:
+        #     fov_shape, pic_shape = cut_fov_img_S2000(mrxs_path, pic_dir, conf.camera_resolution)
+        # else:
+        #     fov_shape, pic_shape = cut_fov_img(mrxs_path, pic_dir, conf.camera_resolution)
     elif mrxs_path.endswith('.svs'):
         pic_dir = mrxs_path.replace(".svs", "-Cut")
         fov_shape, pic_shape = cut_fov_img_haidexing(mrxs_path, pic_dir)
@@ -903,7 +904,7 @@ def draw_img_by_json(pics_dir, stitch_json_path, save_dir):
 
     tifffile.imwrite(os.path.join(save_dir, "img_dist.tif"),
                      img_dist,
-                     compression="jpeg")
+                     compression="LZW")
 
     # 画底板
     from need.CorrectWholeImg import cal_zoom_rate, gen_std_board_loc, gen_std_board_img
@@ -930,7 +931,7 @@ def find_distance(img, M=None, conv_len=20, peaks_threshold=0.25, peaks_min_dist
     fft_signal = abs(np.fft.fft(x_sum))
     # 控制数据范围，避免离谱数据
     # fft_signal[0] = 0
-    fft_signal[:len(x_sum)//12] = 0
+    fft_signal[:len(x_sum)//20] = 0
     fft_signal[-len(x_sum)//2:] = 0
 
     # import matplotlib.pyplot as plt
@@ -1035,8 +1036,8 @@ def correct_img(wrong_point_norm, stitch_json_path):
 
 if __name__ == '__main__':
     pass
-    pic_dir = r"E:\test\S3000\1129-S3000-SN-40X.mrxs"
-    reg_box = [[2872, 3048], [44560, 2828], [44844, 44792], [3128, 45040]]
+    pic_dir = r"E:\test\20231222_153155.sdpc 38_32 142_142 1\whole_img.tif"
+    reg_box = [[1692, 3810], [34402, 3580], [34630, 37302], [1922, 37526]]
     stitch_json = cut_and_stitch(pic_dir, reg_box)
 
     # pics_dir = r"E:\Cell_seg_images\20230411-BI10BN04F4-B4-JZL-FG16-20X-Cut"

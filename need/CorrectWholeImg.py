@@ -287,6 +287,10 @@ def correct_whole_img(img_path, detect_channel=None):
         # out_rate = img.shape[0] / conf.out_size
         # new_size = (np.asarray(img.shape[:2]) / out_rate).astype(dtype=int)
         img = cv2.resize(img, (int(conf.out_size * 0.99435), conf.out_size))  # 芯片标准宽度比高度有个比例
+    else:
+        height = img.shape[0]
+        weight = int(height * 0.99435)  # 芯片标准宽度比高度有个比例
+        img = cv2.resize(img, (weight, height))
     img_dist = img.copy()
 
     zoom_rate = 1

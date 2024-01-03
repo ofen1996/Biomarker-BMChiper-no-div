@@ -13,6 +13,22 @@ import tifffile
 from need.MRXSBase import MRXSBase
 
 
+def my_warpPerspective(src, M, dsize, **kwargs):
+    # 对于尺寸超出限制的图像，采取先缩放，再映射，再放大回原尺寸
+    max_len = max(src.shape)
+    if max_len > 32768:
+        from skimage import transform
+        warped_image = transform.warp(src, np.linalg.inv(M), output_shape=dsize[::-1])
+        return (warped_image * 255).astype(np.uint8)
+
+        # scale_rate = 20000 / max_len
+        # scale_img = cv2.resize(src, (int(src.shape[1] * scale_rate), int(src.shape[0] * scale_rate)))
+        # scale_img = cv2.warpPerspective(scale_img, M, scale_img.shape[:2][::-1], **kwargs)
+        # return cv2.resize(scale_img, src.shape[:2][::-1])
+    else:
+        return cv2.warpPerspective(src, M, dsize, **kwargs)
+    pass
+
 
 class ChipRegionWidget(QWidget):
     def __init__(self, parent=None):
@@ -235,8 +251,9 @@ class ChipRegionWidget(QWidget):
         else:
             # img = tifffile.imread(self.image_filename, level=0)
             with tifffile.TiffFile(self.image_filename) as tif:
-                if tif.is_bigtiff:
-                    img = tif.asarray(level=2)
+                if tif.series[0].shape[0] > 30000 or tif.series[0].shape[1] > 30000:
+                    img = tif.asarray(level=0)
+                    img = img[::2, ::2, ...]
                 else:
                     img = tif.asarray(level=0)
             img = Image.fromarray(img)
@@ -471,7 +488,7 @@ class ChipRegionWidget(QWidget):
         # 透视变换
         ori_img = self.draw_argvs['zoom_imgs'][-1]
         np_img = np.array(ori_img)
-        warped = cv2.warpPerspective(np_img, M, (img_w, img_h))
+        warped = my_warpPerspective(np_img, M, (img_w, img_h))
         print(f"reg_box={reg_box}, desc_box={desc_box}")
 
         tif_file = f"{self.image_filename[:-4]}_chip.tif"
