@@ -199,7 +199,7 @@ def cut_fov_img(mrxs_path, save_path, camera_resolution=(2448, 2048)):
     return FOV_SHAPE[::-1], FOV_PIXES[::-1]
 
 
-def cut_fov_img_tif(tif_path, save_path, camera_resolution=(1024, 1224)):
+def cut_fov_img_tif(tif_path, save_path, camera_resolution=(1216, 1012)):
     if not os.path.exists(save_path):
         os.mkdir(save_path)
 
@@ -241,7 +241,7 @@ def cut_fov_img_haidexing(svs_path, save_path, camera_resolution=(2448, 2048)):
 
     slide = openslide.OpenSlide(svs_path)
 
-    FOV_SHAPE = (np.asarray(slide.level_dimensions[0]) / FOV_PIXES).astype(int)
+    FOV_SHAPE = (np.asarray(slide.level_dimensions[0][::-1]) / FOV_PIXES).astype(int)
 
     if len(os.listdir(save_path)) >= FOV_SHAPE[0] * FOV_SHAPE[1]:
         print(save_path, "\n", "it has cuted, skip it.")
@@ -464,11 +464,11 @@ def calculate_M(reg_box):
 
 def gen_index_by_reg_box(reg_box, img_shape):
     reg_box = np.asarray(reg_box)
-    x_start = reg_box[0][0] // img_shape[1]
-    y_start = reg_box[0][1] // img_shape[0]
+    x_start = min(reg_box[0][0], reg_box[3][0]) // img_shape[1]
+    y_start = min(reg_box[0][1], reg_box[1][1]) // img_shape[0]
 
-    x_end = reg_box[2][0] // img_shape[1]
-    y_end = reg_box[2][1] // img_shape[0]
+    x_end = max(reg_box[2][0], reg_box[1][0]) // img_shape[1]
+    y_end = max(reg_box[2][1], reg_box[3][1]) // img_shape[0]
 
     all_index_y_x = []
     for y in range(y_start, y_end + 1):
@@ -523,7 +523,7 @@ def new_stitch(pics_dir, reg_box, pic_shape=(2048, 2448), save_dir=None):
     # std_d = 14.83
     # std_d = 14.836363636363636
     std_d = calculate_std_d(pics_dir, stitch_json)
-    # std_d = 4.48249
+    # std_d = 14.836363636363636
     std_r = int(std_d * 0.4)
     print("std_d :{}".format(std_d))
     # 重新设定whole_img_size
@@ -571,7 +571,8 @@ def new_stitch(pics_dir, reg_box, pic_shape=(2048, 2448), save_dir=None):
             # img = img_ori.copy()
             # out_img, centers = detector.detect(img, 0.4)
             img_merge = cv2.cvtColor(img[..., conf.stitch_channal], cv2.COLOR_GRAY2BGR)
-            # show_img(img_bin)
+            # img_merge = cv2.cvtColor(cv2.equalizeHist(img[..., conf.stitch_channal]), cv2.COLOR_GRAY2BGR)
+            # show_img(cv2.equalizeHist(img[..., conf.stitch_channal]))
             # # yolo预测交汇点
             out_img, centers = detector.detect(img_merge, 0.4)  # 荧光解码文件的预测方法
             # out_img, centers = detector.detect(cv2.bitwise_not(binary_pic(img_merge)), 0.4)  # 荧光解码文件的预测方法
@@ -830,10 +831,10 @@ def cut_and_stitch(mrxs_path, reg_box):
         #     fov_shape, pic_shape = cut_fov_img(mrxs_path, pic_dir, conf.camera_resolution)
     elif mrxs_path.endswith('.svs'):
         pic_dir = mrxs_path.replace(".svs", "-Cut")
-        fov_shape, pic_shape = cut_fov_img_haidexing(mrxs_path, pic_dir)
+        fov_shape, pic_shape = cut_fov_img_haidexing(mrxs_path, pic_dir, conf.camera_resolution)
     elif mrxs_path.endswith('.tif'):
         pic_dir = mrxs_path.replace(".tif", "-Cut")
-        fov_shape, pic_shape = cut_fov_img_tif(mrxs_path, pic_dir)
+        fov_shape, pic_shape = cut_fov_img_tif(mrxs_path, pic_dir, conf.camera_resolution)
     print("End cut pic, start stitch pic...")
 
     save_dir = pic_dir + '-new_stitch'
@@ -1036,14 +1037,14 @@ def correct_img(wrong_point_norm, stitch_json_path):
 
 if __name__ == '__main__':
     pass
-    pic_dir = r"E:\test\20231222_153155.sdpc 38_32 142_142 1\whole_img.tif"
-    reg_box = [[1692, 3810], [34402, 3580], [34630, 37302], [1922, 37526]]
+    pic_dir = r"E:\test\whole_img.tif"
+    reg_box = [[1929, 1321], [23939, 1433], [23835, 23513], [1830, 23400]]
     stitch_json = cut_and_stitch(pic_dir, reg_box)
 
     # pics_dir = r"E:\Cell_seg_images\20230411-BI10BN04F4-B4-JZL-FG16-20X-Cut"
     # stitch_json = load_json(r"E:\test\tmp\20230823-20230309-BK16BN18F6-B4-T-2-FG93-IF-20X-20230823-103731383-Cut-new_stitch\stitch_json.json")
     # a = calculate_std_d(pics_dir, stitch_json)
 
-    # img=r"E:\test\S3000\1129-S3000-SN-40X-Cut\ori_2_20.tif"
+    # img=r"E:\test\0129-20231115-CA31BN02F5-B4-PCA2-20XFL-20240129-154003222-Cut\ori_2_9.tif"
     # img = tifffile.imread(img)
     # a = find_distance(img)

@@ -48,6 +48,9 @@ class ChipRegionWidget(QWidget):
 
         self.image_filename = None
 
+        # 对于大的tif图，做下采样处理
+        self.tif_desize = None
+
         # self.corr_spots = CorrSpotsData()
 
     def init_parameters(self):
@@ -254,6 +257,7 @@ class ChipRegionWidget(QWidget):
                 if tif.series[0].shape[0] > 30000 or tif.series[0].shape[1] > 30000:
                     img = tif.asarray(level=0)
                     img = img[::2, ::2, ...]
+                    self.tif_desize = 2
                 else:
                     img = tif.asarray(level=0)
             img = Image.fromarray(img)

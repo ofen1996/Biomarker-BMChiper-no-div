@@ -224,10 +224,13 @@ class ChipRegionMain(QMainWindow, Ui_MainWindow):
             return
         try:
             if self.widget_right.image_filename.endswith('.svs'):
-                # 海德星的倍率是4的倍数
-                corners = np.asarray(self.widget_right.draw_argvs['rect_points']) * (4 ** conf.mrxs_read_level)
+                # 海德星的倍率是2的倍数
+                corners = np.asarray(self.widget_right.draw_argvs['rect_points']) * (2 ** conf.mrxs_read_level)
             if self.widget_right.image_filename.endswith('.tif'):
-                corners = np.asarray(self.widget_right.draw_argvs['rect_points'])
+                if self.widget_right.tif_desize is None:
+                    corners = np.asarray(self.widget_right.draw_argvs['rect_points'])
+                else:
+                    corners = np.asarray(self.widget_right.draw_argvs['rect_points']) * self.widget_right.tif_desize
             else:
                 corners = np.asarray(self.widget_right.draw_argvs['rect_points']) * (2**conf.mrxs_read_level)
             if conf.base_mode == "S2000-2":
