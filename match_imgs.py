@@ -523,6 +523,12 @@ def new_stitch(pics_dir, reg_box, pic_shape=(2048, 2448), save_dir=None):
     # std_d = 14.83
     # std_d = 14.836363636363636
     std_d = calculate_std_d(pics_dir, stitch_json)
+
+    if conf.std_d == "auto":
+        pass
+    else:
+        print("Use given std_d!")
+        std_d = float(conf.std_d)
     # std_d = 14.836363636363636
     std_r = int(std_d * 0.4)
     print("std_d :{}".format(std_d))

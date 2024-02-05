@@ -31,7 +31,7 @@ class Ui_MainWindow(object):
         self.toolBox.setEnabled(True)
         self.toolBox.setObjectName("toolBox")
         self.page_file = QtWidgets.QWidget()
-        self.page_file.setGeometry(QtCore.QRect(0, 0, 392, 288))
+        self.page_file.setGeometry(QtCore.QRect(0, 0, 379, 306))
         self.page_file.setObjectName("page_file")
         self.verticalLayout_7 = QtWidgets.QVBoxLayout(self.page_file)
         self.verticalLayout_7.setContentsMargins(5, 0, 0, 0)
@@ -55,7 +55,23 @@ class Ui_MainWindow(object):
         self.comboBox.addItem("")
         self.comboBox.addItem("")
         self.horizontalLayout.addWidget(self.comboBox)
+        self.horizontalLayout.setStretch(0, 1)
+        self.horizontalLayout.setStretch(1, 2)
         self.verticalLayout.addLayout(self.horizontalLayout)
+        self.horizontalLayout_4 = QtWidgets.QHBoxLayout()
+        self.horizontalLayout_4.setObjectName("horizontalLayout_4")
+        self.label_5 = QtWidgets.QLabel(self.widget_2)
+        self.label_5.setObjectName("label_5")
+        self.horizontalLayout_4.addWidget(self.label_5)
+        self.comboBox_std_d = QtWidgets.QComboBox(self.widget_2)
+        self.comboBox_std_d.setObjectName("comboBox_std_d")
+        self.comboBox_std_d.addItem("")
+        self.comboBox_std_d.addItem("")
+        self.comboBox_std_d.addItem("")
+        self.horizontalLayout_4.addWidget(self.comboBox_std_d)
+        self.horizontalLayout_4.setStretch(0, 1)
+        self.horizontalLayout_4.setStretch(1, 2)
+        self.verticalLayout.addLayout(self.horizontalLayout_4)
         self.gridLayout_4 = QtWidgets.QGridLayout()
         self.gridLayout_4.setObjectName("gridLayout_4")
         self.bnt_right_bottom = QtWidgets.QPushButton(self.widget_2)
@@ -143,6 +159,7 @@ class Ui_MainWindow(object):
         self.comboBox.currentIndexChanged['int'].connect(MainWindow.choose_channel_show_cao) # type: ignore
         self.new_stitch_channel.clicked.connect(MainWindow.new_stitch_channel_cao) # type: ignore
         self.correct_match_result.clicked.connect(MainWindow.correct_match_result_cao) # type: ignore
+        self.comboBox_std_d.currentIndexChanged['int'].connect(MainWindow.change_std_d_cao) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
@@ -154,6 +171,10 @@ class Ui_MainWindow(object):
         self.comboBox.setItemText(1, _translate("MainWindow", "R"))
         self.comboBox.setItemText(2, _translate("MainWindow", "G"))
         self.comboBox.setItemText(3, _translate("MainWindow", "B"))
+        self.label_5.setText(_translate("MainWindow", "标准间距："))
+        self.comboBox_std_d.setItemText(0, _translate("MainWindow", "auto"))
+        self.comboBox_std_d.setItemText(1, _translate("MainWindow", "14.8363636"))
+        self.comboBox_std_d.setItemText(2, _translate("MainWindow", "17.565"))
         self.bnt_right_bottom.setText(_translate("MainWindow", "右下"))
         self.bnt_left_bottom.setText(_translate("MainWindow", "左下"))
         self.bnt_right_top.setText(_translate("MainWindow", "右上"))

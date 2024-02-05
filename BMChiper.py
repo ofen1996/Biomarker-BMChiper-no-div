@@ -72,7 +72,7 @@ class ChipRegionMain(QMainWindow, Ui_MainWindow):
         self.gridLayout_main.addWidget(self.widget_right, 0, 1, 1, 1)
         self.widget_right.setStyleSheet('#widget_right{background-color:#FF0000;}')
 
-        self.setWindowTitle('BMChiper V2.1')
+        self.setWindowTitle('BMChiper V3.1')
         self.setWindowIcon(QIcon('../bmk_logo.png'))  # 设置窗体标题图标
 
         # 设置放大
@@ -216,6 +216,11 @@ class ChipRegionMain(QMainWindow, Ui_MainWindow):
         pass
         print(self.comboBox.currentIndex())
         self.widget_right.channel_show = self.comboBox.currentIndex()
+
+    def change_std_d_cao(self):
+        pass
+        print("std_d changed:", self.comboBox_std_d.currentText())
+        conf.std_d = self.comboBox_std_d.currentText()
 
     def new_stitch_channel_cao(self):
         conf.reload()  # 重新读取配置文件，以支持热修改

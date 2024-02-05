@@ -350,7 +350,7 @@ def correct_whole_img(img_path, detect_channel=None):
 
 
 if __name__ == '__main__':
-    img_path = r"E:\test\20230817-20230609-BG27BN02F6-A3-F-G1-16UM-PI-20X-4F-4-Cut-new_stitch\new_stitch_img.tif"
+    img_path = r"C:\Users\ofen\Documents\WXWork\1688855473391904\Cache\File\2024-02\Result-2024-02-01-133859.1_chip.tif"
     correct_whole_img(img_path, detect_channel=0)
 
 

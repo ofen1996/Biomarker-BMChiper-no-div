@@ -15,6 +15,8 @@ class Config:
         self.barcode_size_y = 35
         self.mrxs_read_level = 0
 
+        self.std_d = "auto"
+
         self.DEBUG = None
         self.use_real_kp_only = None
         self.kp_detect_confidence = None

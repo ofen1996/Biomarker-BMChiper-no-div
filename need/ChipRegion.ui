@@ -46,8 +46,8 @@
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>392</width>
-             <height>288</height>
+             <width>379</width>
+             <height>306</height>
             </rect>
            </property>
            <attribute name="label">
@@ -77,7 +77,7 @@
                 </widget>
                </item>
                <item>
-                <layout class="QHBoxLayout" name="horizontalLayout">
+                <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,2">
                  <item>
                   <widget class="QLabel" name="label">
                    <property name="text">
@@ -105,6 +105,36 @@
                    <item>
                     <property name="text">
                      <string>B</string>
+                    </property>
+                   </item>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+               <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_4" stretch="1,2">
+                 <item>
+                  <widget class="QLabel" name="label_5">
+                   <property name="text">
+                    <string>标准间距：</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QComboBox" name="comboBox_std_d">
+                   <item>
+                    <property name="text">
+                     <string>auto</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>14.8363636</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>17.565</string>
                     </property>
                    </item>
                   </widget>
@@ -334,8 +364,8 @@
    <slot>collect_point_left_top_cao()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>168</x>
-     <y>155</y>
+     <x>186</x>
+     <y>182</y>
     </hint>
     <hint type="destinationlabel">
      <x>332</x>
@@ -350,8 +380,8 @@
    <slot>collect_point_left_bottom_cao()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>156</x>
-     <y>184</y>
+     <x>174</x>
+     <y>211</y>
     </hint>
     <hint type="destinationlabel">
      <x>334</x>
@@ -383,7 +413,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>387</x>
-     <y>184</y>
+     <y>211</y>
     </hint>
     <hint type="destinationlabel">
      <x>335</x>
@@ -399,7 +429,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>387</x>
-     <y>155</y>
+     <y>182</y>
     </hint>
     <hint type="destinationlabel">
      <x>335</x>
@@ -414,8 +444,8 @@
    <slot>save_chip_region_rect_cao()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>165</x>
-     <y>214</y>
+     <x>182</x>
+     <y>241</y>
     </hint>
     <hint type="destinationlabel">
      <x>332</x>
@@ -430,8 +460,8 @@
    <slot>stitch_chip_cao()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>271</x>
-     <y>241</y>
+     <x>288</x>
+     <y>270</y>
     </hint>
     <hint type="destinationlabel">
      <x>498</x>
@@ -446,8 +476,8 @@
    <slot>correct_whole_cao()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>217</x>
-     <y>288</y>
+     <x>234</x>
+     <y>328</y>
     </hint>
     <hint type="destinationlabel">
      <x>423</x>
@@ -478,8 +508,8 @@
    <slot>new_stitch_channel_cao()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>210</x>
-     <y>261</y>
+     <x>227</x>
+     <y>299</y>
     </hint>
     <hint type="destinationlabel">
      <x>423</x>
@@ -494,8 +524,24 @@
    <slot>correct_match_result_cao()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>217</x>
-     <y>343</y>
+     <x>225</x>
+     <y>372</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>423</x>
+     <y>290</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>comboBox_std_d</sender>
+   <signal>currentIndexChanged(int)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>change_std_d_cao()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>300</x>
+     <y>142</y>
     </hint>
     <hint type="destinationlabel">
      <x>423</x>
@@ -517,5 +563,6 @@
   <slot>choose_channel_show_cao()</slot>
   <slot>new_stitch_channel_cao()</slot>
   <slot>correct_match_result_cao()</slot>
+  <slot>change_std_d_cao()</slot>
  </slots>
 </ui>
