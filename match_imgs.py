@@ -200,6 +200,43 @@ def cut_fov_img(mrxs_path, save_path, camera_resolution=(2448, 2048)):
 
 
 def cut_fov_img_tif(tif_path, save_path, camera_resolution=(1216, 1012)):
+    # 通用tif
+    if not os.path.exists(save_path):
+        os.mkdir(save_path)
+
+    FOV_PIXES = camera_resolution
+
+    whole_img = tifffile.imread(tif_path)
+    # whole_img = cv2.resize(whole_img, (23040, 22528))
+
+    FOV_SHAPE = (np.asarray(whole_img.shape[:2][::-1]) / FOV_PIXES).astype(int)
+
+    if len(os.listdir(save_path)) >= FOV_SHAPE[0] * FOV_SHAPE[1]:
+        print(save_path, "\n", "it has cuted, skip it.")
+        return FOV_SHAPE[::-1], FOV_PIXES[::-1]
+
+    for hi in range(FOV_SHAPE[1]):
+        for wi in range(FOV_SHAPE[0]):
+            # select_part = np.asarray((wi, hi))
+            t1 = time.time()
+            # im = np.asarray(slide.read_region((BOUND_X, BOUND_Y) + FOV_PIXES * select_part, 0, FOV_PIXES))
+            tmp_h_start, tmp_w_start = hi * FOV_PIXES[1], wi * FOV_PIXES[0]
+            im = whole_img[tmp_h_start:tmp_h_start+FOV_PIXES[1], tmp_w_start:tmp_w_start+FOV_PIXES[0]]
+            ### 以下为免疫荧光专用调试代码，需要注释
+            # clahe = cv2.createCLAHE(clipLimit=4.0, tileGridSize=(16, 16))
+            # im[..., conf.stitch_channal] = clahe.apply(im[..., conf.stitch_channal])
+            ####
+            t2 = time.time()
+            # show_img(im)
+            save_name = "ori_{}_{}.tif".format(hi, wi)
+            tifffile.imwrite(os.path.join(save_path, save_name), im, compression='LZW')
+            # tifffile.imwrite(os.path.join(save_path, save_name), im)
+            t3 = time.time()
+    return FOV_SHAPE[::-1], FOV_PIXES[::-1]
+
+
+def cut_fov_img_tif_HDX(tif_path, save_path, camera_resolution=(1216, 1012)):
+    # 海德星tif
     if not os.path.exists(save_path):
         os.mkdir(save_path)
 
@@ -467,8 +504,8 @@ def gen_index_by_reg_box(reg_box, img_shape):
     x_start = min(reg_box[0][0], reg_box[3][0]) // img_shape[1]
     y_start = min(reg_box[0][1], reg_box[1][1]) // img_shape[0]
 
-    x_end = max(reg_box[2][0], reg_box[1][0]) // img_shape[1]
-    y_end = max(reg_box[2][1], reg_box[3][1]) // img_shape[0]
+    x_end = (max(reg_box[2][0], reg_box[1][0])-1) // img_shape[1]
+    y_end = (max(reg_box[2][1], reg_box[3][1])-1) // img_shape[0]
 
     all_index_y_x = []
     for y in range(y_start, y_end + 1):
@@ -530,6 +567,7 @@ def new_stitch(pics_dir, reg_box, pic_shape=(2048, 2448), save_dir=None):
         print("Use given std_d!")
         std_d = float(conf.std_d)
     # std_d = 14.836363636363636
+    # std_d = 29.237410071942445
     std_r = int(std_d * 0.4)
     print("std_d :{}".format(std_d))
     # 重新设定whole_img_size
@@ -570,7 +608,9 @@ def new_stitch(pics_dir, reg_box, pic_shape=(2048, 2448), save_dir=None):
         for index_y_x in all_index_y_x:
 
             index_y, index_x = index_y_x
-
+            # if not os.path.exists(os.path.join(pics_dir, "ori_{}_{}.tif".format(index_y, index_x))):
+            #     print("ori_{}_{}.tif is not exist".format(index_y, index_x))
+            #     continue
             img = tifffile.imread(os.path.join(pics_dir, "ori_{}_{}.tif".format(index_y, index_x)))[..., :3]
             # img = cv2.warpPerspective(img_ori, M, img_ori.shape[:2][::-1], borderMode=cv2.BORDER_REFLECT_101)
 
@@ -1043,8 +1083,8 @@ def correct_img(wrong_point_norm, stitch_json_path):
 
 if __name__ == '__main__':
     pass
-    pic_dir = r"E:\test\whole_img.tif"
-    reg_box = [[1929, 1321], [23939, 1433], [23835, 23513], [1830, 23400]]
+    pic_dir = r"E:\test\no_new.tif"
+    reg_box = [[509, 261], [22671, 260], [22667, 22519], [503, 22525]]
     stitch_json = cut_and_stitch(pic_dir, reg_box)
 
     # pics_dir = r"E:\Cell_seg_images\20230411-BI10BN04F4-B4-JZL-FG16-20X-Cut"
