@@ -15,6 +15,25 @@
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout_main">
+    <item row="0" column="1">
+     <widget class="QWidget" name="widget_right" native="true">
+      <layout class="QGridLayout" name="gridLayout_9">
+       <item row="1" column="1">
+        <spacer name="horizontalSpacer">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+    </item>
     <item row="0" column="0">
      <widget class="QScrollArea" name="left_scrollArea">
       <property name="widgetResizable">
@@ -47,7 +66,7 @@
              <x>0</x>
              <y>0</y>
              <width>379</width>
-             <height>306</height>
+             <height>333</height>
             </rect>
            </property>
            <attribute name="label">
@@ -75,6 +94,41 @@
                   <string>加载HE图片</string>
                  </property>
                 </widget>
+               </item>
+               <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_2" stretch="1,2">
+                 <item>
+                  <widget class="QLabel" name="label_2">
+                   <property name="text">
+                    <string>芯片型号：</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QComboBox" name="comboBox_Smode">
+                   <item>
+                    <property name="text">
+                     <string>S1000</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>S3000</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>S2000</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>S2000-2</string>
+                    </property>
+                   </item>
+                  </widget>
+                 </item>
+                </layout>
                </item>
                <item>
                 <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,2">
@@ -301,25 +355,6 @@
       </widget>
      </widget>
     </item>
-    <item row="0" column="1">
-     <widget class="QWidget" name="widget_right" native="true">
-      <layout class="QGridLayout" name="gridLayout_9">
-       <item row="1" column="1">
-        <spacer name="horizontalSpacer">
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>40</width>
-           <height>20</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-      </layout>
-     </widget>
-    </item>
    </layout>
   </widget>
   <widget class="QMenuBar" name="menubar">
@@ -364,8 +399,8 @@
    <slot>collect_point_left_top_cao()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>186</x>
-     <y>182</y>
+     <x>204</x>
+     <y>209</y>
     </hint>
     <hint type="destinationlabel">
      <x>332</x>
@@ -380,8 +415,8 @@
    <slot>collect_point_left_bottom_cao()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>174</x>
-     <y>211</y>
+     <x>192</x>
+     <y>238</y>
     </hint>
     <hint type="destinationlabel">
      <x>334</x>
@@ -413,7 +448,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>387</x>
-     <y>211</y>
+     <y>238</y>
     </hint>
     <hint type="destinationlabel">
      <x>335</x>
@@ -429,7 +464,7 @@
    <hints>
     <hint type="sourcelabel">
      <x>387</x>
-     <y>182</y>
+     <y>209</y>
     </hint>
     <hint type="destinationlabel">
      <x>335</x>
@@ -444,8 +479,8 @@
    <slot>save_chip_region_rect_cao()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>182</x>
-     <y>241</y>
+     <x>199</x>
+     <y>268</y>
     </hint>
     <hint type="destinationlabel">
      <x>332</x>
@@ -460,8 +495,8 @@
    <slot>stitch_chip_cao()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>288</x>
-     <y>270</y>
+     <x>305</x>
+     <y>297</y>
     </hint>
     <hint type="destinationlabel">
      <x>498</x>
@@ -476,8 +511,8 @@
    <slot>correct_whole_cao()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>234</x>
-     <y>328</y>
+     <x>251</x>
+     <y>355</y>
     </hint>
     <hint type="destinationlabel">
      <x>423</x>
@@ -492,8 +527,8 @@
    <slot>choose_channel_show_cao()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>307</x>
-     <y>112</y>
+     <x>387</x>
+     <y>151</y>
     </hint>
     <hint type="destinationlabel">
      <x>423</x>
@@ -508,8 +543,8 @@
    <slot>new_stitch_channel_cao()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>227</x>
-     <y>299</y>
+     <x>244</x>
+     <y>326</y>
     </hint>
     <hint type="destinationlabel">
      <x>423</x>
@@ -524,8 +559,8 @@
    <slot>correct_match_result_cao()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>225</x>
-     <y>372</y>
+     <x>233</x>
+     <y>399</y>
     </hint>
     <hint type="destinationlabel">
      <x>423</x>
@@ -540,8 +575,24 @@
    <slot>change_std_d_cao()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>300</x>
-     <y>142</y>
+     <x>387</x>
+     <y>178</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>423</x>
+     <y>290</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>comboBox_Smode</sender>
+   <signal>currentIndexChanged(int)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>change_Smode_cao()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>271</x>
+     <y>115</y>
     </hint>
     <hint type="destinationlabel">
      <x>423</x>
@@ -564,5 +615,6 @@
   <slot>new_stitch_channel_cao()</slot>
   <slot>correct_match_result_cao()</slot>
   <slot>change_std_d_cao()</slot>
+  <slot>change_Smode_cao()</slot>
  </slots>
 </ui>

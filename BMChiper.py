@@ -56,6 +56,10 @@ class ChipRegionMain(QMainWindow, Ui_MainWindow):
         self.setupUi(self)
         # 对图形界面进行展示设置
         self.setupWinShow()
+
+        ## 初始化
+        self.comboBox_Smode.setCurrentText(conf.base_mode)
+
         pass
 
     def setupWinShow(self):
@@ -72,7 +76,7 @@ class ChipRegionMain(QMainWindow, Ui_MainWindow):
         self.gridLayout_main.addWidget(self.widget_right, 0, 1, 1, 1)
         self.widget_right.setStyleSheet('#widget_right{background-color:#FF0000;}')
 
-        self.setWindowTitle('BMChiper V3.1')
+        self.setWindowTitle('BMChiper V4.0')
         self.setWindowIcon(QIcon('../bmk_logo.png'))  # 设置窗体标题图标
 
         # 设置放大
@@ -273,6 +277,16 @@ class ChipRegionMain(QMainWindow, Ui_MainWindow):
             raise
             return
 
+        pass
+
+    def change_Smode_cao(self):
+        Smode = self.comboBox_Smode.currentText()
+        conf.conf.set("default", "base_mode", str(Smode))
+        with open(conf.ini_path, "w") as conf_ini:
+            conf.conf.write(conf_ini)
+
+        conf.reload()  # 重新读取配置文件，以支持热修改
+        print("Smode: {}".format(conf.base_mode))
         pass
 
     def correct_match_result_cao(self):

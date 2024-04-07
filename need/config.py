@@ -6,6 +6,7 @@ class Config:
     def __init__(self, ini_path):
         self.ini_path = ini_path
         self.conf = None
+        self.machine = None
 
         self.base_mode = "S1000"
         self.base_size_x = 46
@@ -48,6 +49,8 @@ class Config:
     def load(self, ini_path):
         self.conf = configparser.ConfigParser()
         self.conf.read(ini_path, encoding="utf-8")
+
+        self.machine = self.conf.get("default", "machine")
 
         if self.conf.has_option("default", "mrxs_read_level"):
             self.mrxs_read_level = int(self.conf.get("default", "mrxs_read_level"))

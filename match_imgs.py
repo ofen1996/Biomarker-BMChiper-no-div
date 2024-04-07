@@ -274,7 +274,8 @@ def cut_fov_img_haidexing(svs_path, save_path, camera_resolution=(2448, 2048)):
     if not os.path.exists(save_path):
         os.mkdir(save_path)
 
-    FOV_PIXES = camera_resolution[::-1]  # 因为海德星的图像旋转了90°，所以高和宽换一下
+    # FOV_PIXES = camera_resolution[::-1]  # 因为海德星的图像旋转了90°，所以高和宽换一下
+    FOV_PIXES = camera_resolution
 
     slide = openslide.OpenSlide(svs_path)
 
@@ -526,6 +527,8 @@ def new_stitch(pics_dir, reg_box, pic_shape=(2048, 2448), save_dir=None):
     reg_box = np.asarray(reg_box)
     stitch_json = {"reg_box": reg_box.tolist()}
     M, rect_points = calculate_M(reg_box)
+    if conf.machine == "HDX":
+        M = np.eye(3)  # 不做变形
     # #######博奥###############
     # M = [
     #     [
@@ -1084,7 +1087,7 @@ def correct_img(wrong_point_norm, stitch_json_path):
 if __name__ == '__main__':
     pass
     pic_dir = r"E:\test\no_new.tif"
-    reg_box = [[509, 261], [22671, 260], [22667, 22519], [503, 22525]]
+    reg_box = [[2478, 3924], [43542, 3926], [43540, 44712], [2478, 44702]]
     stitch_json = cut_and_stitch(pic_dir, reg_box)
 
     # pics_dir = r"E:\Cell_seg_images\20230411-BI10BN04F4-B4-JZL-FG16-20X-Cut"
