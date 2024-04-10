@@ -44,7 +44,8 @@ class Config:
         self.load(self.ini_path)
 
     def reload(self):
-        self.load(self.ini_path)
+        # self.load(self.ini_path)
+        self.__init__(self.ini_path)
 
     def load(self, ini_path):
         self.conf = configparser.ConfigParser()

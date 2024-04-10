@@ -87,10 +87,8 @@ def generate_whole_tif_gray(pics_dir, pixes=(2048, 2448)):
             print(pic_name)
             img = tifffile.imread(os.path.join(pics_dir, pic_name))
             # img = np.asarray(Image.open(os.path.join(pics_dir, pic_name)))
-            if img.max() <= 85:
-                img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY) * 3  # 海德星的伪彩色会降亮度
-            else:
-                img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+            img = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
+            img = img[..., 2]
             img = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)  # 旋转角度
 
             # show_img(img)
