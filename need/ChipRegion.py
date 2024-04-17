@@ -32,13 +32,13 @@ class Ui_MainWindow(object):
         self.scrollAreaWidgetContents = QtWidgets.QWidget()
         self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 410, 519))
         self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
-        self.gridLayout_3 = QtWidgets.QGridLayout(self.scrollAreaWidgetContents)
-        self.gridLayout_3.setObjectName("gridLayout_3")
+        self.verticalLayout_2 = QtWidgets.QVBoxLayout(self.scrollAreaWidgetContents)
+        self.verticalLayout_2.setObjectName("verticalLayout_2")
         self.toolBox = QtWidgets.QToolBox(self.scrollAreaWidgetContents)
         self.toolBox.setEnabled(True)
         self.toolBox.setObjectName("toolBox")
         self.page_file = QtWidgets.QWidget()
-        self.page_file.setGeometry(QtCore.QRect(0, 0, 379, 333))
+        self.page_file.setGeometry(QtCore.QRect(0, 0, 392, 449))
         self.page_file.setObjectName("page_file")
         self.verticalLayout_7 = QtWidgets.QVBoxLayout(self.page_file)
         self.verticalLayout_7.setContentsMargins(5, 0, 0, 0)
@@ -85,11 +85,8 @@ class Ui_MainWindow(object):
         self.label_5 = QtWidgets.QLabel(self.widget_2)
         self.label_5.setObjectName("label_5")
         self.horizontalLayout_4.addWidget(self.label_5)
-        self.comboBox_std_d = QtWidgets.QComboBox(self.widget_2)
+        self.comboBox_std_d = QtWidgets.QLineEdit(self.widget_2)
         self.comboBox_std_d.setObjectName("comboBox_std_d")
-        self.comboBox_std_d.addItem("")
-        self.comboBox_std_d.addItem("")
-        self.comboBox_std_d.addItem("")
         self.horizontalLayout_4.addWidget(self.comboBox_std_d)
         self.horizontalLayout_4.setStretch(0, 1)
         self.horizontalLayout_4.setStretch(1, 2)
@@ -131,7 +128,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_7.addWidget(self.correct_match_result)
         self.toolBox.addItem(self.page_file, "")
         self.page_chip_region = QtWidgets.QWidget()
-        self.page_chip_region.setGeometry(QtCore.QRect(0, 0, 392, 196))
+        self.page_chip_region.setGeometry(QtCore.QRect(0, 0, 392, 449))
         self.page_chip_region.setObjectName("page_chip_region")
         self.verticalLayout_4 = QtWidgets.QVBoxLayout(self.page_chip_region)
         self.verticalLayout_4.setContentsMargins(5, 0, 0, 0)
@@ -143,9 +140,7 @@ class Ui_MainWindow(object):
         spacerItem2 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.verticalLayout_4.addItem(spacerItem2)
         self.toolBox.addItem(self.page_chip_region, "")
-        self.gridLayout_3.addWidget(self.toolBox, 1, 0, 1, 1)
-        spacerItem3 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
-        self.gridLayout_3.addItem(spacerItem3, 2, 0, 1, 1)
+        self.verticalLayout_2.addWidget(self.toolBox)
         self.left_scrollArea.setWidget(self.scrollAreaWidgetContents)
         self.gridLayout_main.addWidget(self.left_scrollArea, 0, 0, 1, 1)
         MainWindow.setCentralWidget(self.centralwidget)
@@ -174,8 +169,8 @@ class Ui_MainWindow(object):
         self.comboBox.currentIndexChanged['int'].connect(MainWindow.choose_channel_show_cao) # type: ignore
         self.new_stitch_channel.clicked.connect(MainWindow.new_stitch_channel_cao) # type: ignore
         self.correct_match_result.clicked.connect(MainWindow.correct_match_result_cao) # type: ignore
-        self.comboBox_std_d.currentIndexChanged['int'].connect(MainWindow.change_std_d_cao) # type: ignore
         self.comboBox_Smode.currentIndexChanged['int'].connect(MainWindow.change_Smode_cao) # type: ignore
+        self.comboBox_std_d.editingFinished.connect(MainWindow.change_std_d_cao) # type: ignore
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
@@ -193,9 +188,7 @@ class Ui_MainWindow(object):
         self.comboBox.setItemText(2, _translate("MainWindow", "G"))
         self.comboBox.setItemText(3, _translate("MainWindow", "B"))
         self.label_5.setText(_translate("MainWindow", "标准间距："))
-        self.comboBox_std_d.setItemText(0, _translate("MainWindow", "auto"))
-        self.comboBox_std_d.setItemText(1, _translate("MainWindow", "14.8363636"))
-        self.comboBox_std_d.setItemText(2, _translate("MainWindow", "17.565"))
+        self.comboBox_std_d.setText(_translate("MainWindow", "auto"))
         self.bnt_right_bottom.setText(_translate("MainWindow", "右下"))
         self.bnt_left_bottom.setText(_translate("MainWindow", "左下"))
         self.bnt_right_top.setText(_translate("MainWindow", "右上"))

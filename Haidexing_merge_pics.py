@@ -55,13 +55,19 @@ def generate_whole_tif_RGB(pics_dir, pixes=(2048, 2448)):
     return whole_img
 
 
-def generate_whole_tif_gray(pics_dir, pixes=(2048, 2448)):
+def generate_whole_tif_gray(pics_dir, pixes=None):
+
     # pics_dir = r"E:\biomarker_data\test_machine\Images"
     # pixes = np.array((2048, 2448))
     img_names = os.listdir(pics_dir)
+    img_type = ".tif"
+    if pixes is None:
+        tmp_img = np.asarray(Image.open(os.path.join(pics_dir, img_names[0])))
+        pixes = tmp_img.shape[:2]
+        img_type = os.path.splitext(img_names[0])[-1]
 
-    rows = [int(name[3:6]) for name in img_names if name.endswith(".tif")]
-    cols = [int(name[7:10]) for name in img_names if name.endswith(".tif")]
+    rows = [int(name[3:6]) for name in img_names if name.endswith(img_type)]
+    cols = [int(name[7:10]) for name in img_names if name.endswith(img_type)]
 
     # 设置矩阵形状
     row, col = max(rows), max(cols)
@@ -83,10 +89,10 @@ def generate_whole_tif_gray(pics_dir, pixes=(2048, 2448)):
         for c_i in range(col):
             r, c = right_index[c_i, r_i]
 
-            pic_name = "IMG{}x{}.tif".format(str(r).zfill(3), str(c).zfill(3))
+            pic_name = "IMG{}x{}{}".format(str(r).zfill(3), str(c).zfill(3), img_type)
             print(pic_name)
-            img = tifffile.imread(os.path.join(pics_dir, pic_name))
-            # img = np.asarray(Image.open(os.path.join(pics_dir, pic_name)))
+            # img = tifffile.imread(os.path.join(pics_dir, pic_name))
+            img = np.asarray(Image.open(os.path.join(pics_dir, pic_name)))
             img = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
             img = img[..., 2]
             img = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE)  # 旋转角度

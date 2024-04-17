@@ -55,6 +55,8 @@ class Config:
 
         if self.conf.has_option("default", "mrxs_read_level"):
             self.mrxs_read_level = int(self.conf.get("default", "mrxs_read_level"))
+        if self.conf.has_option("default", "std_d"):
+            self.std_d = self.conf.get("default", "std_d")
 
         self.calculate_size = int(self.conf.get("correct-whole-img", "calculate_size"))
         self.out_size = int(self.conf.get("correct-whole-img", "max_out_size"))

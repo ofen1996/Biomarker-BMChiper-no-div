@@ -59,6 +59,13 @@ class ChipRegionMain(QMainWindow, Ui_MainWindow):
 
         ## 初始化
         self.comboBox_Smode.setCurrentText(conf.base_mode)
+        ## conf 初始化部分参数
+        # self.comboBox_std_d.setText(conf.std_d)
+        conf.conf.set("default", "std_d", self.comboBox_std_d.text())
+        with open(conf.ini_path, "w") as conf_ini:
+            conf.conf.write(conf_ini)
+
+        conf.reload()  # 重新读取配置文件，以支持热修改
 
         pass
 
@@ -223,8 +230,14 @@ class ChipRegionMain(QMainWindow, Ui_MainWindow):
 
     def change_std_d_cao(self):
         pass
-        print("std_d changed:", self.comboBox_std_d.currentText())
-        conf.std_d = self.comboBox_std_d.currentText()
+        std_d = self.comboBox_std_d.text()
+        conf.conf.set("default", "std_d", std_d)
+        with open(conf.ini_path, "w") as conf_ini:
+            conf.conf.write(conf_ini)
+
+        conf.reload()  # 重新读取配置文件，以支持热修改
+
+        print("std_d changed:", conf.std_d)
 
     def new_stitch_channel_cao(self):
         conf.reload()  # 重新读取配置文件，以支持热修改
