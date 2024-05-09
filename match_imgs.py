@@ -515,6 +515,96 @@ def gen_index_by_reg_box(reg_box, img_shape):
     return [[int(x_start), int(y_start)], [int(x_end), int(y_end)]], all_index_y_x
 
 
+def rotate_image(image, angle):
+    """
+    Rotate the image by a given angle and return the rotation matrix and the rotated image.
+
+    Parameters:
+    image (np.array): Input image (numpy array).
+    angle (float): Rotation angle in degrees, counterclockwise.
+
+    Returns:
+    tuple: A tuple containing:
+        - np.array: 3x3 rotation matrix
+        - np.array: Rotated image
+    """
+    # 获取图像尺寸
+    height, width = image.shape[:2]
+
+    # 计算图像中心点
+    center = (width / 2, height / 2)
+
+    # 使用cv2.getRotationMatrix2D获得2x3的旋转矩阵
+    rotation_matrix_2x3 = cv2.getRotationMatrix2D(center, angle, 1.0)
+
+    # 将2x3矩阵扩展成3x3矩阵
+    rotation_matrix_3x3 = np.vstack([rotation_matrix_2x3, [0, 0, 1]])
+
+    # 使用旋转矩阵来旋转图像
+    rotated_image = cv2.warpAffine(image, rotation_matrix_2x3, (width, height))
+    return rotation_matrix_3x3, rotated_image
+
+
+def find_best_rotate(img):
+    # 检查图像是否正确读取
+    if len(img.shape) == 3 and img.shape[2] == 3:
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    angles = []
+    grad_values = []
+    rot_matrixs = []
+    for angle in np.arange(-3, 3, 0.05):
+        # 旋转图像
+        angle = np.round(angle, 2)  # 旋转角度
+        rot_matrix, rot_img = rotate_image(img, angle)
+
+        # 计算每行求和后的二阶梯度之和
+        row_sum = np.sum(rot_img[200:-200, 200:-200], axis=1)
+        value = sum(np.abs(np.gradient(row_sum, 2)))
+
+        angles.append(angle)
+        grad_values.append(value)
+        rot_matrixs.append(rot_matrix)
+
+        # print(f"Angle:{angle},Grad value:{value}")
+
+        # show_img(rot_img)
+        # 打印旋转矩阵
+        # print("Rotation Matrix:\n", rot_matrix)
+
+    # plt.plot(angles, grad_values, marker='o')
+    best_angle = angles[np.argmax(grad_values)]
+    best_rot_matrix = rot_matrixs[np.argmax(grad_values)]
+
+    # print(f"Best angle:{best_angle}")
+
+    # rotated_image = cv2.warpPerspective(img, best_rot_matrix, img.shape[:2][::-1])
+    # show_img(rotated_image)
+
+    return best_angle, best_rot_matrix
+
+
+def caculate_angle_M(pics_dir, stitch_json):
+    x_y_range = stitch_json["x_y_range"]
+
+    all_angle = []
+    all_M = []
+    for i in range(5):
+        # 随机选择序号，避开边缘
+        random_x = random.randint(x_y_range[0][0] + 1, x_y_range[1][0] - 1)
+        random_y = random.randint(x_y_range[0][1] + 1, x_y_range[1][1] - 1)
+        img = cv2.imread(os.path.join(pics_dir, f"ori_{random_y}_{random_x}.tif"))
+        best_angle, best_rot_matrix = find_best_rotate(img)
+        all_angle.append(best_angle)
+        all_M.append(best_rot_matrix)
+        print(f"ori_{random_y}_{random_x}.tif -> best_angle:{best_angle}")
+    all_angle = np.array(all_angle)
+    median_angle = np.median(all_angle)
+    median_index = np.where(all_angle == median_angle)[0]  # 取中位数索引
+    median_M = all_M[median_index[0]]
+    return median_angle, median_M
+
+
 def new_stitch(pics_dir, reg_box, pic_shape=(2048, 2448), save_dir=None):
     if save_dir is None:
         save_dir = pic_dir + '-new_stitch'
@@ -526,9 +616,9 @@ def new_stitch(pics_dir, reg_box, pic_shape=(2048, 2448), save_dir=None):
         return os.path.join(save_dir, "img_dist_with_board.tif")
     reg_box = np.asarray(reg_box)
     stitch_json = {"reg_box": reg_box.tolist()}
-    M, rect_points = calculate_M(reg_box)
-    if conf.machine == "HDX":
-        M = np.eye(3)  # 不做变形
+    # M, rect_points = calculate_M(reg_box)
+    # if conf.machine == "HDX":
+    #     M = np.eye(3)  # 不做变形
     # #######博奥###############
     # M = [
     #     [
@@ -550,11 +640,23 @@ def new_stitch(pics_dir, reg_box, pic_shape=(2048, 2448), save_dir=None):
     # M = np.array(M)
     # #####################
     stitch_json["pic_shape"] = np.asarray(pic_shape, dtype=int).tolist()
-    stitch_json["M"] = M.tolist()
+    # stitch_json["M"] = M.tolist()
     stitch_json["pics_dir"] = pics_dir
 
     x_y_range, all_index_y_x = gen_index_by_reg_box(reg_box, pic_shape)
     stitch_json["x_y_range"], stitch_json["all_index_y_x"] = x_y_range, all_index_y_x
+
+    # 估算图像偏转角度
+    if conf.machine == "3D":
+        M, rect_points = calculate_M(reg_box)
+    elif conf.machine == "None":
+        M = np.eye(3)  # 不做变形
+    else:
+        angle, M = caculate_angle_M(pics_dir, stitch_json)
+        print("final angle: {}".format(angle))
+        stitch_json["angle"] = float(angle)
+
+    stitch_json["M"] = M.tolist()
 
     # 17.565
     # overlap_rate = 0.014297385620915032
