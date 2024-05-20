@@ -1169,7 +1169,7 @@ def correct_img(wrong_point_norm, stitch_json_path):
     error_img = tifffile.imread(os.path.join(pic_dir, error_img_name))[..., conf.stitch_channal]
     error_img = cv2.cvtColor(error_img, cv2.COLOR_GRAY2RGB)
     circle_centers = np.load(stitch_json["std_circles_center_path"])
-    circle_img = draw_part_circle_pic(circle_centers, stitch_json, error_img_loc)
+    circle_img = draw_part_circle_pic(circle_centers, stitch_json, error_img_loc, shape=(conf.barcode_size_x, conf.barcode_size_y))
     # add_img = np.where(circle_img > 0, circle_img, error_img)
     # show_img(add_img[:500, :500])
     new_shift = shift_move_show_img(circle_img, error_img, scale_size=(800, 800),
