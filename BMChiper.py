@@ -122,7 +122,7 @@ class ChipRegionMain(QMainWindow, Ui_MainWindow):
         base_dir = os.path.split(filename_choose)[0]
         conf.reload()
         conf.conf.set("default", "base_dir", base_dir)
-        with open(conf.ini_path, 'w') as f:
+        with open(conf.ini_path, 'w', encoding="utf-8") as f:
             conf.conf.write(f)
         pass
     # 采集芯片区域的4个点
@@ -314,6 +314,7 @@ class ChipRegionMain(QMainWindow, Ui_MainWindow):
 
 
 def correct_match_result():
+    conf.reload()  # 重新读取配置文件，以支持热修改
     tmp = window.widget_right.draw_argvs["mode_2_point"].copy()
     while window.widget_right.draw_argvs["mode_2_point"] == tmp:
         time.sleep(0.2)

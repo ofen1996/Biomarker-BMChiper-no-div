@@ -344,10 +344,10 @@ class StitchImg:
 
 if __name__ == '__main__':
     pass
-    stitch_from_pic(r"E:\test\imgs1147_31_37\img_dist",
-                    (36, 31),
-                    r"E:\test\imgs1147_31_37\img_dist_out",
-                    start_pic_index=(0, 0))
+    stitch_from_pic(r"E:\test\yingguang\20240510\20240510_brain-noproK_1-1-Cut",
+                    (8, 6),
+                    r"E:\test\yingguang\20240510\20240510_brain-noproK_1-1-Cut",
+                    start_pic_index=(3, 2))
     # stitch_from_pic(
     #     r"E:\LQGCS\20221128-BI29BN02F2-A4-GZ-LQG-20X-cut",
     #     (12, 13),
