@@ -1071,7 +1071,7 @@ def draw_img_by_json(pics_dir, stitch_json_path, save_dir):
     return stitch_img
 
 
-def find_distance(img, M=None, conv_len=20, peaks_threshold=0.25, peaks_min_distance=100):
+def find_distance(img, M=None, micro_rate=10):
     # 利用寻峰方法找到一张二值化图的平均分界线距离
     if M is not None:
         img = my_warpPerspective(img, M, img.shape[:2][::-1])
@@ -1080,16 +1080,19 @@ def find_distance(img, M=None, conv_len=20, peaks_threshold=0.25, peaks_min_dist
     # show_img(img_b)
 
     x_sum = np.sum(img_b, axis=0, dtype=int)
-    fft_signal = abs(np.fft.fft(x_sum))
+
+    # x_sum = np.interp(np.linspace(0, len(x_sum)-1, 10000), np.arange(len(x_sum)), x_sum)
+
+    fft_signal = abs(np.fft.fft(x_sum, n=len(x_sum)*micro_rate))
     # 控制数据范围，避免离谱数据
-    # fft_signal[0] = 0
-    fft_signal[:len(x_sum)//20] = 0
-    fft_signal[-len(x_sum)//2:] = 0
+    fft_signal[0] = 0
+    fft_signal[:len(fft_signal)//20] = 0
+    fft_signal[-len(fft_signal)//2:] = 0
 
     # import matplotlib.pyplot as plt
     # plt.plot(fft_signal)
     # plt.plot(x_sum)
-    f = np.argmax(fft_signal)
+    f = np.argmax(fft_signal) / micro_rate
 
     # show_img(img_b)
     # plt.close()
@@ -1188,13 +1191,13 @@ def correct_img(wrong_point_norm, stitch_json_path):
 
 if __name__ == '__main__':
     pass
-    pic_dir = r"E:\test\no_new.tif"
-    reg_box = [[2478, 3924], [43542, 3926], [43540, 44712], [2478, 44702]]
-    stitch_json = cut_and_stitch(pic_dir, reg_box)
+    # pic_dir = r"E:\test\no_new.tif"
+    # reg_box = [[2478, 3924], [43542, 3926], [43540, 44712], [2478, 44702]]
+    # stitch_json = cut_and_stitch(pic_dir, reg_box)
 
-    # pics_dir = r"E:\Cell_seg_images\20230411-BI10BN04F4-B4-JZL-FG16-20X-Cut"
-    # stitch_json = load_json(r"E:\test\tmp\20230823-20230309-BK16BN18F6-B4-T-2-FG93-IF-20X-20230823-103731383-Cut-new_stitch\stitch_json.json")
-    # a = calculate_std_d(pics_dir, stitch_json)
+    pics_dir = r"E:\test\slide-2024-06-04T10-36-24-R1-S3-Cut"
+    stitch_json = load_json(r"E:\test\slide-2024-06-04T10-36-24-R1-S3-Cut-new_stitch\stitch_json.json")
+    a = calculate_std_d(pics_dir, stitch_json)
 
     # img=r"E:\test\0129-20231115-CA31BN02F5-B4-PCA2-20XFL-20240129-154003222-Cut\ori_2_9.tif"
     # img = tifffile.imread(img)

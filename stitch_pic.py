@@ -44,7 +44,7 @@ def cut_fov_img(mrxs_path, save_path, camera_resolution=(2448, 2048)):
         for wi in range(FOV_SHAPE[0]):
             select_part = np.asarray((wi, hi))
             t1 = time.time()
-            im = np.asarray(slide.read_region((BOUND_X, BOUND_Y) + FOV_PIXES * select_part, 0, FOV_PIXES))
+            im = np.asarray(slide.read_region((BOUND_X, BOUND_Y) + FOV_PIXES * select_part, 0, FOV_PIXES))[..., :3]
             t2 = time.time()
             # show_img(im)
             save_name = "ori_{}_{}.tif".format(hi, wi)
@@ -142,9 +142,10 @@ def match_pic_column(img_before, img):
 
 def stitch_from_pic(pic_dir, fov_shape, save_dir, start_pic_index=(0, 0), stitch_channel=None):
     end_pic_index = [fov_shape[0] - 1, fov_shape[1] - 1]
-    tmp = cv2.imread(os.path.join(pic_dir, "ori_{}_{}.tif".format(start_pic_index[0],
-                                                                  start_pic_index[1])))
-
+    # tmp = cv2.imread(os.path.join(pic_dir, "ori_{}_{}.tif".format(start_pic_index[0],
+    #                                                               start_pic_index[1])))
+    tmp = tifffile.imread(os.path.join(pic_dir, "ori_{}_{}.tif".format(start_pic_index[0],
+                                                                       start_pic_index[1])))
     print("fov size:{}".format(tmp.shape))
     whole_size = (tmp.shape[0] * (end_pic_index[0] + 1 - start_pic_index[0]),
                   tmp.shape[1] * (end_pic_index[1] + 1 - start_pic_index[1]))
@@ -159,7 +160,8 @@ def stitch_from_pic(pic_dir, fov_shape, save_dir, start_pic_index=(0, 0), stitch
             if (h_i, w_i) == (1, 1):
                 pass
             pic_path = os.path.join(pic_dir, pic_name)
-            img = cv2.imread(pic_path)
+            # img = cv2.imread(pic_path)
+            img = tifffile.imread(pic_path)
             # img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
             # 判断当前图像的位置：1：起始位置（第一行第一张）
@@ -173,7 +175,8 @@ def stitch_from_pic(pic_dir, fov_shape, save_dir, start_pic_index=(0, 0), stitch
                 # 找上一张图像做匹配参考
                 pic_name_before = "ori_{}_{}.tif".format(h_i - 1, w_i)
                 pic_path_before = os.path.join(pic_dir, pic_name_before)
-                img_before = cv2.imread(pic_path_before)
+                # img_before = cv2.imread(pic_path_before)
+                img_before = tifffile.imread(pic_path_before)
                 # 计算与上一张图的位置偏移
                 if stitch_channel not in [None, 3]:
                     shift_h_w, _ = match_pic_column(img_before[..., stitch_channel], img[..., stitch_channel])
@@ -186,7 +189,8 @@ def stitch_from_pic(pic_dir, fov_shape, save_dir, start_pic_index=(0, 0), stitch
                 # 找前一张图像做匹配参考
                 pic_name_before = "ori_{}_{}.tif".format(h_i, w_i - 1)
                 pic_path_before = os.path.join(pic_dir, pic_name_before)
-                img_before = cv2.imread(pic_path_before)
+                # img_before = cv2.imread(pic_path_before)
+                img_before = tifffile.imread(pic_path_before)
                 # 计算与前一张图的位置偏移
                 if stitch_channel not in [None, 3]:
                     shift_h_w, _ = match_pic_row(img_before[..., stitch_channel], img[..., stitch_channel])
@@ -199,7 +203,8 @@ def stitch_from_pic(pic_dir, fov_shape, save_dir, start_pic_index=(0, 0), stitch
                 # 找上一张图像做匹配参考
                 pic_name_before = "ori_{}_{}.tif".format(h_i - 1, w_i)
                 pic_path_before = os.path.join(pic_dir, pic_name_before)
-                img_before = cv2.imread(pic_path_before)
+                # img_before = cv2.imread(pic_path_before)
+                img_before = tifffile.imread(pic_path_before)
                 # 计算与上一张图的位置偏移
                 if stitch_channel not in [None, 3]:
                     shift_h_w, match_point_col = match_pic_column(img_before[..., stitch_channel], img[..., stitch_channel])
@@ -211,7 +216,8 @@ def stitch_from_pic(pic_dir, fov_shape, save_dir, start_pic_index=(0, 0), stitch
                 # 找前一张图像做匹配参考
                 pic_name_before = "ori_{}_{}.tif".format(h_i, w_i - 1)
                 pic_path_before = os.path.join(pic_dir, pic_name_before)
-                img_before = cv2.imread(pic_path_before)
+                # img_before = cv2.imread(pic_path_before)
+                img_before = tifffile.imread(pic_path_before)
                 # 计算与前一张图的位置偏移
                 if stitch_channel not in [None, 3]:
                     shift_h_w, match_point_row = match_pic_row(img_before[..., stitch_channel], img[..., stitch_channel])
@@ -283,8 +289,11 @@ class StitchImg:
         print("Start cut pic")
         fov_shape = cut_fov_img(self.mrxs_path, self.pic_dir, self.camera_resolution)
         self.end_pic_index = [fov_shape[0] - 1, fov_shape[1] - 1]
-        tmp = cv2.imread(os.path.join(self.pic_dir, "ori_{}_{}.tif".format(self.start_pic_index[0],
-                                                                           self.start_pic_index[1])))
+        # tmp = cv2.imread(os.path.join(self.pic_dir, "ori_{}_{}.tif".format(self.start_pic_index[0],
+        #                                                                    self.start_pic_index[1])))
+
+        tmp = tifffile.imread(os.path.join(self.pic_dir, "ori_{}_{}.tif".format(self.start_pic_index[0],
+                                                                                self.start_pic_index[1])))
 
         # 计算新的4个角点坐标在哪几个图片内，以及它们在各自图内的位置
         for corner in self.ori_corners:
