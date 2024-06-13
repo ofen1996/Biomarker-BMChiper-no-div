@@ -238,7 +238,7 @@
                   <bool>false</bool>
                  </property>
                  <property name="text">
-                  <string>带二分镜缝合</string>
+                  <string>依据底板缝合</string>
                  </property>
                 </widget>
                </item>

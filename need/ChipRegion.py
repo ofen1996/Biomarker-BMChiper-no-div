@@ -195,7 +195,7 @@ class Ui_MainWindow(object):
         self.bnt_left_top.setText(_translate("MainWindow", "左上"))
         self.save_chip_rect.setText(_translate("MainWindow", "保存区域"))
         self.stitch_chip.setText(_translate("MainWindow", "缝合并裁剪"))
-        self.new_stitch_channel.setText(_translate("MainWindow", "带二分镜缝合"))
+        self.new_stitch_channel.setText(_translate("MainWindow", "依据底板缝合"))
         self.correct_whole.setText(_translate("MainWindow", "全图校准(需先裁剪)"))
         self.correct_match_result.setText(_translate("MainWindow", "二分镜缝合校正"))
         self.toolBox.setItemText(self.toolBox.indexOf(self.page_file), _translate("MainWindow", "芯片区域手工识别"))
