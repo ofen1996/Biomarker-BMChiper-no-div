@@ -1,5 +1,6 @@
 import os.path
 
+import zarr
 import cv2
 import numpy as np
 import openslide
@@ -222,6 +223,42 @@ def cut_fov_img_tif(tif_path, save_path, camera_resolution=(1216, 1012)):
             # im = np.asarray(slide.read_region((BOUND_X, BOUND_Y) + FOV_PIXES * select_part, 0, FOV_PIXES))
             tmp_h_start, tmp_w_start = hi * FOV_PIXES[1], wi * FOV_PIXES[0]
             im = whole_img[tmp_h_start:tmp_h_start+FOV_PIXES[1], tmp_w_start:tmp_w_start+FOV_PIXES[0]]
+            ### 以下为免疫荧光专用调试代码，需要注释
+            # clahe = cv2.createCLAHE(clipLimit=4.0, tileGridSize=(16, 16))
+            # im[..., conf.stitch_channal] = clahe.apply(im[..., conf.stitch_channal])
+            ####
+            t2 = time.time()
+            # show_img(im)
+            save_name = "ori_{}_{}.tif".format(hi, wi)
+            tifffile.imwrite(os.path.join(save_path, save_name), im, compression='LZW')
+            # tifffile.imwrite(os.path.join(save_path, save_name), im)
+            t3 = time.time()
+    return FOV_SHAPE[::-1], FOV_PIXES[::-1]
+
+
+def cut_fov_img_zarr(zarr_path, save_path, camera_resolution=(1216, 1012)):
+    # 通用tif
+    if not os.path.exists(save_path):
+        os.mkdir(save_path)
+
+    FOV_PIXES = camera_resolution
+
+    whole_img = zarr.open(zarr_path, 'r')
+    # whole_img = cv2.resize(whole_img, (23040, 22528))
+
+    FOV_SHAPE = (np.asarray(whole_img.shape[:2][::-1]) / FOV_PIXES).astype(int)
+
+    if len(os.listdir(save_path)) >= FOV_SHAPE[0] * FOV_SHAPE[1]:
+        print(save_path, "\n", "it has cuted, skip it.")
+        return FOV_SHAPE[::-1], FOV_PIXES[::-1]
+
+    for hi in range(FOV_SHAPE[1]):
+        for wi in range(FOV_SHAPE[0]):
+            # select_part = np.asarray((wi, hi))
+            t1 = time.time()
+            # im = np.asarray(slide.read_region((BOUND_X, BOUND_Y) + FOV_PIXES * select_part, 0, FOV_PIXES))
+            tmp_h_start, tmp_w_start = hi * FOV_PIXES[1], wi * FOV_PIXES[0]
+            im = whole_img[tmp_h_start:tmp_h_start+FOV_PIXES[1], tmp_w_start:tmp_w_start+FOV_PIXES[0], ...]
             ### 以下为免疫荧光专用调试代码，需要注释
             # clahe = cv2.createCLAHE(clipLimit=4.0, tileGridSize=(16, 16))
             # im[..., conf.stitch_channal] = clahe.apply(im[..., conf.stitch_channal])
@@ -593,7 +630,7 @@ def caculate_angle_M(pics_dir, stitch_json):
         # 随机选择序号，避开边缘
         random_x = random.randint(x_y_range[0][0] + 1, x_y_range[1][0] - 1)
         random_y = random.randint(x_y_range[0][1] + 1, x_y_range[1][1] - 1)
-        img = cv2.imread(os.path.join(pics_dir, f"ori_{random_y}_{random_x}.tif"))
+        img = tifffile.imread(os.path.join(pics_dir, f"ori_{random_y}_{random_x}.tif"))
         best_angle, best_rot_matrix = find_best_rotate(img)
         all_angle.append(best_angle)
         all_M.append(best_rot_matrix)
@@ -680,8 +717,8 @@ def new_stitch(pics_dir, reg_box, pic_shape=(2048, 2448), save_dir=None):
                       int(conf.std_edge_size[0] * 2 + std_d * (conf.barcode_size_x + 1) * conf.base_size_x) + 1
                       )
     conf.conf.set("match-imgs", "whole_img_size", str(whole_img_size))
-    with open(conf.ini_path, "w") as conf_ini:
-        conf.conf.write(conf_ini)
+    with open(conf.ini_path, "w", encoding="utf-8") as conf_ini:
+        conf.conf.write(conf_ini, encoding="utf-8")
     conf.whole_img_size = whole_img_size
 
     std_circle = StdCircles(conf.whole_img_size, (conf.barcode_size_x, conf.barcode_size_y), std_d, std_r, M=M)
@@ -986,6 +1023,9 @@ def cut_and_stitch(mrxs_path, reg_box):
     elif mrxs_path.endswith('.tif'):
         pic_dir = mrxs_path.replace(".tif", "-Cut")
         fov_shape, pic_shape = cut_fov_img_tif(mrxs_path, pic_dir, conf.camera_resolution)
+    elif mrxs_path.endswith('-zarr'):
+        pic_dir = mrxs_path.replace("-zarr", "-Cut")
+        fov_shape, pic_shape = cut_fov_img_zarr(mrxs_path, pic_dir, conf.camera_resolution)
     print("End cut pic, start stitch pic...")
 
     save_dir = pic_dir + '-new_stitch'
@@ -1071,7 +1111,10 @@ def draw_img_by_json(pics_dir, stitch_json_path, save_dir):
     return stitch_img
 
 
-def find_distance(img, M=None, micro_rate=10):
+def find_distance(img, M=None, micro_rate=int(conf.conf.get("match-imgs", "auto_std_d_sub_rate"))):
+    auto_std_d_min = int(conf.conf.get("match-imgs", "auto_std_d_min"))//2
+    auto_std_d_max = int(conf.conf.get("match-imgs", "auto_std_d_max"))//2
+    # print(micro_rate, auto_std_d_min, auto_std_d_max)
     # 利用寻峰方法找到一张二值化图的平均分界线距离
     if M is not None:
         img = my_warpPerspective(img, M, img.shape[:2][::-1])
@@ -1086,8 +1129,8 @@ def find_distance(img, M=None, micro_rate=10):
     fft_signal = abs(np.fft.fft(x_sum, n=len(x_sum)*micro_rate))
     # 控制数据范围，避免离谱数据
     fft_signal[0] = 0
-    fft_signal[:len(fft_signal)//20] = 0
-    fft_signal[-len(fft_signal)//2:] = 0
+    fft_signal[:len(fft_signal)//auto_std_d_max] = 0
+    fft_signal[len(fft_signal)//auto_std_d_min:] = 0
 
     # import matplotlib.pyplot as plt
     # plt.plot(fft_signal)
@@ -1191,13 +1234,15 @@ def correct_img(wrong_point_norm, stitch_json_path):
 
 if __name__ == '__main__':
     pass
-    # pic_dir = r"E:\test\no_new.tif"
-    # reg_box = [[2478, 3924], [43542, 3926], [43540, 44712], [2478, 44702]]
-    # stitch_json = cut_and_stitch(pic_dir, reg_box)
+    pic_dir = r"E:\test\志盈\图像-zarr"
+    reg_box = [[846, 2412], [27670, 2352], [27698, 29636], [852, 29692]]
+    stitch_json = cut_and_stitch(pic_dir, reg_box)
 
-    pics_dir = r"E:\test\slide-2024-06-04T10-36-24-R1-S3-Cut"
-    stitch_json = load_json(r"E:\test\slide-2024-06-04T10-36-24-R1-S3-Cut-new_stitch\stitch_json.json")
-    a = calculate_std_d(pics_dir, stitch_json)
+    # pics = r"E:\test\ori_2_7.tif"
+    # stitch_json = load_json(r"E:\test\stitch_json.json")
+    # M = np.array(stitch_json["M"])
+    # img = tifffile.imread(pics)
+    # mean_distance = find_distance(img, M=M)
 
     # img=r"E:\test\0129-20231115-CA31BN02F5-B4-PCA2-20XFL-20240129-154003222-Cut\ori_2_9.tif"
     # img = tifffile.imread(img)

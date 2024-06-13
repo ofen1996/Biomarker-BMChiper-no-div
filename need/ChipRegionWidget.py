@@ -1,5 +1,6 @@
+import os.path
 import sys
-
+import zarr
 import openslide
 from PyQt5 import QtWidgets
 from PyQt5.Qt import *
@@ -250,6 +251,9 @@ class ChipRegionWidget(QWidget):
             img = slide.read_region((0, 0), level=mrxs_read_level, size=slide.level_dimensions[mrxs_read_level])
             img = np.rot90(img, -1)
             img = Image.fromarray(img)
+        elif image_filename[-5:] == '-zarr':
+            slide = zarr.open(image_filename, mode="r")
+            img = Image.fromarray(slide[::2**mrxs_read_level, ::2**mrxs_read_level, ...])
         # 图片读取
         else:
             # img = tifffile.imread(self.image_filename, level=0)

@@ -67,14 +67,18 @@ class ChipRegionMain(QMainWindow, Ui_MainWindow):
 
         conf.reload()  # 重新读取配置文件，以支持热修改
 
+        translator = QTranslator()
+        translator.load("src/zh_CN.qm")
+        app.installTranslator(translator)
+        self.retranslateUi(self)
         pass
 
     def setupWinShow(self):
-        self.setMinimumSize(600, 400)
+        self.setMinimumSize(800, 600)
         self.centralwidget.setStyleSheet('#centralwidget{background-color:#FAFBF3;}')
 
         self.left_scrollArea.setStyleSheet('#widget_left{background-color:#F5F9E3;}')
-        self.left_scrollArea.setFixedWidth(260)
+        self.left_scrollArea.setFixedWidth(360)
         self.toolBox.setCurrentIndex(0)
         # print(self.widget_right)
 
@@ -104,13 +108,17 @@ class ChipRegionMain(QMainWindow, Ui_MainWindow):
         conf.reload()
         if not isinstance(self.widget_right, ChipRegionWidget):
             self.chip_region_setup_env()
-        filename_choose = FileDirBase.open_file(self,'*.tif *.tiff *.mrxs *.svs')
+        filename_choose = FileDirBase.open_file(self,'*.tif *.tiff *.mrxs *.svs *.zarray')
         if filename_choose is None:
             return
         if filename_choose.endswith(".mrxs"):
             self.stitch_chip.setEnabled(True)
             self.new_stitch_channel.setEnabled(True)
         elif filename_choose.endswith(".svs"):
+            self.stitch_chip.setEnabled(False)
+            self.new_stitch_channel.setEnabled(True)
+        elif filename_choose.endswith(".zarray"):
+            filename_choose = os.path.split(filename_choose)[0]
             self.stitch_chip.setEnabled(False)
             self.new_stitch_channel.setEnabled(True)
         else:
