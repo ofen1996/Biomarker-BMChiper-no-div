@@ -718,7 +718,7 @@ def new_stitch(pics_dir, reg_box, pic_shape=(2048, 2448), save_dir=None):
                       )
     conf.conf.set("match-imgs", "whole_img_size", str(whole_img_size))
     with open(conf.ini_path, "w", encoding="utf-8") as conf_ini:
-        conf.conf.write(conf_ini, encoding="utf-8")
+        conf.conf.write(conf_ini)
     conf.whole_img_size = whole_img_size
 
     std_circle = StdCircles(conf.whole_img_size, (conf.barcode_size_x, conf.barcode_size_y), std_d, std_r, M=M)

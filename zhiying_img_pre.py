@@ -3,6 +3,7 @@ import zarr
 from PIL import Image
 import tifffile
 import numpy as np
+from numcodecs import Blosc
 
 
 def read_base_msg(pics_dir):
@@ -35,6 +36,7 @@ if __name__ == '__main__':
     row, colum, channel, shape, pic_paths = read_base_msg(pics_dir)
 
     # # 开始保存
+    compressor = Blosc(cname='zstd', clevel=8, shuffle=Blosc.BITSHUFFLE)
     img_zarr = zarr.open(save_path, mode="w", shape=(shape[0]*row, shape[1]*colum, 3), chunks=shape, dtype="uint8")
     for pic_path in pic_paths:
         pic_name = os.path.split(pic_path)[-1]

@@ -62,7 +62,7 @@ class ChipRegionMain(QMainWindow, Ui_MainWindow):
         ## conf 初始化部分参数
         # self.comboBox_std_d.setText(conf.std_d)
         conf.conf.set("default", "std_d", self.comboBox_std_d.text())
-        with open(conf.ini_path, "w") as conf_ini:
+        with open(conf.ini_path, "w", encoding="utf-8") as conf_ini:
             conf.conf.write(conf_ini)
 
         conf.reload()  # 重新读取配置文件，以支持热修改
@@ -88,7 +88,7 @@ class ChipRegionMain(QMainWindow, Ui_MainWindow):
         self.widget_right.setStyleSheet('#widget_right{background-color:#FF0000;}')
 
         self.setWindowTitle('BMChiper V4.0')
-        self.setWindowIcon(QIcon('../bmk_logo.png'))  # 设置窗体标题图标
+        self.setWindowIcon(QIcon('./src/bmk_logo.ico'))  # 设置窗体标题图标
 
         # 设置放大
         pass
@@ -105,27 +105,29 @@ class ChipRegionMain(QMainWindow, Ui_MainWindow):
         self.gridLayout_main.addWidget(self.widget_right, 0, 1, 1, 1)
         self.widget_right.setStyleSheet('#widget_right{background-color:#FF0000;}')
     def open_he_img_cao(self):
-        conf.reload()
-        if not isinstance(self.widget_right, ChipRegionWidget):
-            self.chip_region_setup_env()
-        filename_choose = FileDirBase.open_file(self,'*.tif *.tiff *.mrxs *.svs *.zarray')
-        if filename_choose is None:
-            return
-        if filename_choose.endswith(".mrxs"):
-            self.stitch_chip.setEnabled(True)
-            self.new_stitch_channel.setEnabled(True)
-        elif filename_choose.endswith(".svs"):
-            self.stitch_chip.setEnabled(False)
-            self.new_stitch_channel.setEnabled(True)
-        elif filename_choose.endswith(".zarray"):
-            filename_choose = os.path.split(filename_choose)[0]
-            self.stitch_chip.setEnabled(False)
-            self.new_stitch_channel.setEnabled(True)
-        else:
-            self.stitch_chip.setEnabled(False)
-            self.new_stitch_channel.setEnabled(True)
-        self.widget_right.read_image(filename_choose, mrxs_read_level=conf.mrxs_read_level)
-
+        try:
+            conf.reload()
+            if not isinstance(self.widget_right, ChipRegionWidget):
+                self.chip_region_setup_env()
+            filename_choose = FileDirBase.open_file(self,'*.tif *.tiff *.mrxs *.svs *.zarray')
+            if filename_choose is None:
+                return
+            if filename_choose.endswith(".mrxs"):
+                self.stitch_chip.setEnabled(True)
+                self.new_stitch_channel.setEnabled(True)
+            elif filename_choose.endswith(".svs"):
+                self.stitch_chip.setEnabled(False)
+                self.new_stitch_channel.setEnabled(True)
+            elif filename_choose.endswith(".zarray"):
+                filename_choose = os.path.split(filename_choose)[0]
+                self.stitch_chip.setEnabled(False)
+                self.new_stitch_channel.setEnabled(True)
+            else:
+                self.stitch_chip.setEnabled(False)
+                self.new_stitch_channel.setEnabled(True)
+            self.widget_right.read_image(filename_choose, mrxs_read_level=conf.mrxs_read_level)
+        except Exception as e:
+            print("Error:", e)
         # 记忆选择的路径
         base_dir = os.path.split(filename_choose)[0]
         conf.reload()
@@ -240,7 +242,7 @@ class ChipRegionMain(QMainWindow, Ui_MainWindow):
         pass
         std_d = self.comboBox_std_d.text()
         conf.conf.set("default", "std_d", std_d)
-        with open(conf.ini_path, "w") as conf_ini:
+        with open(conf.ini_path, "w", encoding="utf-8") as conf_ini:
             conf.conf.write(conf_ini)
 
         conf.reload()  # 重新读取配置文件，以支持热修改
@@ -277,7 +279,7 @@ class ChipRegionMain(QMainWindow, Ui_MainWindow):
             if self.widget_right.channel_show != 0:
                 stitch_channel = self.widget_right.channel_show - 1
                 conf.conf.set("match-imgs", "stitch_channal", str(stitch_channel))
-                with open(conf.ini_path, "w") as conf_ini:
+                with open(conf.ini_path, "w", encoding="utf-8") as conf_ini:
                     conf.conf.write(conf_ini)
 
             conf.reload()  # 重新读取配置文件，以支持热修改
@@ -303,7 +305,7 @@ class ChipRegionMain(QMainWindow, Ui_MainWindow):
     def change_Smode_cao(self):
         Smode = self.comboBox_Smode.currentText()
         conf.conf.set("default", "base_mode", str(Smode))
-        with open(conf.ini_path, "w") as conf_ini:
+        with open(conf.ini_path, "w", encoding="utf-8") as conf_ini:
             conf.conf.write(conf_ini)
 
         conf.reload()  # 重新读取配置文件，以支持热修改

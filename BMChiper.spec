@@ -36,6 +36,7 @@ exe = EXE(
     argv_emulation=False,
     target_arch=None,
     codesign_identity=None,
+    icon='src\\bmk_logo.ico',
     entitlements_file=None,
 )
 coll = COLLECT(
