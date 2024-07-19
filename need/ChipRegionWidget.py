@@ -11,6 +11,7 @@ import random
 import numpy as np
 import cv2
 import tifffile
+import tiffslide
 from need.MRXSBase import MRXSBase
 
 
@@ -37,6 +38,7 @@ class ChipRegionWidget(QWidget):
         super(ChipRegionWidget, self).__init__(parent)
 
         # init参数设置
+        self.img_slide = None
         self.channel_show = 0
         self.init_parameters()
 
@@ -95,8 +97,12 @@ class ChipRegionWidget(QWidget):
         zoom_levels = self.draw_argvs['zoom_levels']
         zoom_curr_level = self.draw_argvs['zoom_curr_level']
         # 计算原始图片中的偏离
-        ori_deviate_x = int( win_deviate_x * zoom_levels[-1] / zoom_curr_level )
-        ori_deviate_y = int( win_deviate_y * zoom_levels[-1] / zoom_curr_level )
+        if self.img_slide is not None:
+            ori_deviate_x = int(win_deviate_x * zoom_levels[0] / zoom_curr_level)
+            ori_deviate_y = int(win_deviate_y * zoom_levels[0] / zoom_curr_level)
+        else:
+            ori_deviate_x = int( win_deviate_x * zoom_levels[-1] / zoom_curr_level )
+            ori_deviate_y = int( win_deviate_y * zoom_levels[-1] / zoom_curr_level )
         # 计算原始图片上的坐标
         draw_center_pos = self.draw_argvs['draw_center_pos']
         ori_pos_x = draw_center_pos[0] + ori_deviate_x
@@ -128,14 +134,21 @@ class ChipRegionWidget(QWidget):
     def reflush_align_focus(self, win_pos):
         ori_img_pos = self.win_pos_2_ori_img_pos(win_pos)
         # 检测焦点是否在图片外
+        if self.img_slide is not None:
+            max_x = self.img_slide.level_dimensions[0][0]
+            max_y = self.img_slide.level_dimensions[0][1]
+        else:
+            max_x = self.draw_argvs['zoom_imgs'][-1].size[0]
+            max_y = self.draw_argvs['zoom_imgs'][-1].size[1]
+
         if ori_img_pos[0] < 0:
             ori_img_pos[0] = 0
-        if ori_img_pos[0] > self.draw_argvs['zoom_imgs'][-1].size[0]:
-            ori_img_pos[0] = self.draw_argvs['zoom_imgs'][-1].size[0]
+        if ori_img_pos[0] > max_x:
+            ori_img_pos[0] = max_x
         if ori_img_pos[1] < 0:
             ori_img_pos[1] = 0
-        if ori_img_pos[1] > self.draw_argvs['zoom_imgs'][-1].size[1]:
-            ori_img_pos[1] = self.draw_argvs['zoom_imgs'][-1].size[1]
+        if ori_img_pos[1] > max_y:
+            ori_img_pos[1] = max_y
         # 基于修正后的原始图片焦点来重新计算窗口焦点
         win_pos_plus = self.ori_img_pos_2_win_pos(ori_img_pos)
         # 更新焦点
@@ -150,7 +163,7 @@ class ChipRegionWidget(QWidget):
         qp.begin(self)
 
         # 绘图的方法就写在这里就好，begin与end之间
-        if self.draw_argvs['zoom_imgs'][0] is not None:
+        if self.draw_argvs['zoom_imgs'][0] is not None or self.img_slide is not None:
             self.draw_crop_img(qp)
             self.draw_cross_lines(qp)
             self.draw_view_cross_lines(qp)
@@ -184,11 +197,14 @@ class ChipRegionWidget(QWidget):
         win_w_h = [self.width(), self.height()]
         # 计算选取那张图片
         curr_index = self.draw_argvs['zoom_curr_index']
-        img = self.draw_argvs['zoom_imgs'][curr_index]
         # 获取图片中心焦点位置
         ori_center_pos = self.draw_argvs['draw_center_pos']
-        scale_val = self.draw_argvs['zoom_levels'][-(curr_index + 1)]
-        curr_center_pos = [int(ori_center_pos[0] / scale_val), int(ori_center_pos[1] / scale_val)]
+        if self.img_slide is not None:
+            curr_center_pos = [int(ori_center_pos[0] / 1), int(ori_center_pos[1] / 1)]
+        else:
+            scale_val = self.draw_argvs['zoom_levels'][-(curr_index + 1)]
+            curr_center_pos = [int(ori_center_pos[0] / scale_val), int(ori_center_pos[1] / scale_val)]
+        # print(f"curr_index: {curr_index}  scale_val: ")
         # 计算图片上要展示的区域
         curr_level = self.draw_argvs['zoom_curr_level']
         curr_index_val = self.draw_argvs['zoom_levels'][curr_index]
@@ -200,7 +216,15 @@ class ChipRegionWidget(QWidget):
         # 修正图片显示的位置：图片已经进行窗口内部了
         show_rect = [0, 0, win_w_h[0], win_w_h[1]]
         # 绘制当前图片
-        img_crop = img.crop(crop_rect)
+        if self.img_slide is not None:
+            sub_rate = 2 ** (4 - curr_index)  # tifffile 读入的时候，取金字塔图像， 起始点位置如果是负数，会缩小倍数
+            region_start_pos = (crop_start_pos[0] if crop_start_pos[0] > 0 else 0,
+                                crop_start_pos[1] if crop_start_pos[1] > 0 else 0)
+            img_crop = self.img_slide.read_region(region_start_pos, 4 - curr_index, (img_w_h[0], img_w_h[1]))
+            # img_crop = img_crop.crop(crop_rect)
+        else:
+            img = self.draw_argvs['zoom_imgs'][curr_index]
+            img_crop = img.crop(crop_rect)
         if self.channel_show != 0:
             img_crop = np.asarray(img_crop)
             img_crop = img_crop[..., self.channel_show - 1]
@@ -241,6 +265,7 @@ class ChipRegionWidget(QWidget):
 
 
     def read_image(self, image_filename, mrxs_read_level=0):
+        self.img_slide = None
         self.image_filename = image_filename
         # 处理mrxs格式图片
         if image_filename[-4:] == 'MRXS' or image_filename[-4:] == 'mrxs':
@@ -254,6 +279,13 @@ class ChipRegionWidget(QWidget):
         elif image_filename[-5:] == '-zarr':
             slide = zarr.open(image_filename, mode="r")
             img = Image.fromarray(slide[::2**mrxs_read_level, ::2**mrxs_read_level, ...])
+        elif image_filename.endswith(".ome.tif"):
+            self.img_slide = tiffslide.open_slide(image_filename)
+            # 初始焦点设置
+            self.draw_argvs['draw_center_pos'] = [int(self.img_slide.level_dimensions[0][0] / 2),
+                                                  int(self.img_slide.level_dimensions[0][1] / 2)]
+            self.draw_argvs['win_center_pos'] = [int(self.width() / 2), int(self.height() / 2)]
+            return
         # 图片读取
         else:
             # img = tifffile.imread(self.image_filename, level=0)
@@ -308,7 +340,8 @@ class ChipRegionWidget(QWidget):
     #     pass
     # 重写鼠标点击按下的事件处理函数
     def mousePressEvent(self, evt):
-        if self.draw_argvs['zoom_imgs'][0] is None:
+        print([evt.x(), evt.y()])
+        if self.draw_argvs['zoom_imgs'][0] is None and self.img_slide is None:
             return
         # 通过鼠标拖动来移动图片，从而达到浏览图片的目标
         if self.mode == 0 and evt.button() == Qt.LeftButton:
@@ -321,12 +354,13 @@ class ChipRegionWidget(QWidget):
             win_pos = [evt.x(), evt.y()]
             ori_img_pos = self.win_pos_2_ori_img_pos(win_pos)
             # 检测原始图片上的坐标是否超出图片范围
-            if ori_img_pos[0] < 0 or ori_img_pos[0] > self.draw_argvs['zoom_imgs'][-1].size[0]:
-                print('pos out ori img:', ori_img_pos, win_pos)
-                return
-            if ori_img_pos[1] < 0 or ori_img_pos[1] > self.draw_argvs['zoom_imgs'][-1].size[1]:
-                print('pos out ori img:', ori_img_pos, win_pos)
-                return
+            if self.img_slide is None:
+                if ori_img_pos[0] < 0 or ori_img_pos[0] > self.draw_argvs['zoom_imgs'][-1].size[0]:
+                    print('pos out ori img:', ori_img_pos, win_pos)
+                    return
+                if ori_img_pos[1] < 0 or ori_img_pos[1] > self.draw_argvs['zoom_imgs'][-1].size[1]:
+                    print('pos out ori img:', ori_img_pos, win_pos)
+                    return
             if self.mode == 1:
                 # 保存坐标点
                 curr_point_index = self.draw_argvs['rect_points_index']
@@ -342,7 +376,7 @@ class ChipRegionWidget(QWidget):
     # 重写鼠标移动事件函数
     def mouseMoveEvent(self, evt):
         # print("mouse start move")
-        if self.draw_argvs['zoom_imgs'][0] is None:
+        if self.draw_argvs['zoom_imgs'][0] is None and self.img_slide is None:
             return
         # 实时更新鼠标位置
         self.draw_argvs['curr_mouse'] = [evt.x(), evt.y()]
@@ -363,17 +397,26 @@ class ChipRegionWidget(QWidget):
             max_level = self.draw_argvs['zoom_levels'][-1]
             ori_img_move_x = int(-move_x*max_level/curr_level+center_pos[0])
             ori_img_move_y = int(-move_y*max_level/curr_level+center_pos[1])
+            print(f"ori_img_move_x:{ori_img_move_x}, {ori_img_move_y}")
             # 修正中心焦点位置坐标，其不得超出图片范围
+            if self.img_slide is not None:
+                max_x = self.img_slide.level_dimensions[0][0]
+                max_y = self.img_slide.level_dimensions[0][1]
+            else:
+                max_x = self.draw_argvs['zoom_imgs'][-1].size[0]
+                max_y = self.draw_argvs['zoom_imgs'][-1].size[1]
+
             if ori_img_move_x < 0:
                 ori_img_move_x = 0
-            if ori_img_move_x > self.draw_argvs['zoom_imgs'][-1].size[0]:
-                ori_img_move_x = self.draw_argvs['zoom_imgs'][-1].size[0]
+            if ori_img_move_x > max_x:
+                ori_img_move_x = max_x
             if ori_img_move_y < 0:
                 ori_img_move_y = 0
-            if ori_img_move_y > self.draw_argvs['zoom_imgs'][-1].size[1]:
-                ori_img_move_y = self.draw_argvs['zoom_imgs'][-1].size[1]
+            if ori_img_move_y > max_y:
+                ori_img_move_y = max_y
             # 更新中心焦点坐标值
             self.draw_argvs['draw_center_pos'] = [ori_img_move_x, ori_img_move_y]
+            print(f"draw_center_pos:{self.draw_argvs['draw_center_pos']}, {curr_level}, {max_level}")
             # 刷新界面
 
         # print(f"draw_center_pos:{self.draw_argvs['draw_center_pos']}")
@@ -385,7 +428,7 @@ class ChipRegionWidget(QWidget):
     # 重写鼠标释放事件函数
     def mouseReleaseEvent(self, evt):
         print(f"###########mouseReleaseEvent###########")
-        if self.draw_argvs['zoom_imgs'][0] is None:
+        if self.draw_argvs['zoom_imgs'][0] is None and self.img_slide is None:
             return
         if self.mode == 0:
             self.isPressed = False
@@ -411,7 +454,7 @@ class ChipRegionWidget(QWidget):
     # 即以滚轮的动作来进行缩放处理
     def zoom_image(self, zoom_type, win_pos):
         # 获取并保存缩放水平
-        curr_level = self.draw_argvs['zoom_curr_level']*(zoom_type*0.1+1.0)
+        curr_level = self.draw_argvs['zoom_curr_level']*(zoom_type*0.4+1.0)
         zoom_level = self.draw_argvs['zoom_levels']
         if curr_level > zoom_level[-1]:
             return

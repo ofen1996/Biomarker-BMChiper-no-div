@@ -1234,9 +1234,9 @@ def correct_img(wrong_point_norm, stitch_json_path):
 
 if __name__ == '__main__':
     pass
-    pic_dir = r"E:\test\志盈\图像-zarr"
-    reg_box = [[846, 2412], [27670, 2352], [27698, 29636], [852, 29692]]
-    stitch_json = cut_and_stitch(pic_dir, reg_box)
+    # pic_dir = r"E:\test\志盈\图像-zarr"
+    # reg_box = [[846, 2412], [27670, 2352], [27698, 29636], [852, 29692]]
+    # stitch_json = cut_and_stitch(pic_dir, reg_box)
 
     # pics = r"E:\test\ori_2_7.tif"
     # stitch_json = load_json(r"E:\test\stitch_json.json")
@@ -1244,6 +1244,6 @@ if __name__ == '__main__':
     # img = tifffile.imread(pics)
     # mean_distance = find_distance(img, M=M)
 
-    # img=r"E:\test\0129-20231115-CA31BN02F5-B4-PCA2-20XFL-20240129-154003222-Cut\ori_2_9.tif"
-    # img = tifffile.imread(img)
-    # a = find_distance(img)
+    img=r"E:\test\tmp\20x DAPI Brightfield 2024.04.18\merge_whole-Cut\ori_1_5.tif"
+    img = tifffile.imread(img)
+    a = find_distance(img)
