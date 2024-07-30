@@ -178,12 +178,14 @@ def my_conv2d(img, conv_mask, start_loc=(0, 0), end_loc=None,
 def my_warpPerspective(src, M, dsize, **kwargs):
     # 对于尺寸超出限制的图像，采取先缩放，再映射，再放大回原尺寸
     max_len = max(src.shape)
-    if max_len > 32768:
+    if max_len > 32767:
         # from skimage import transform
         # warped_image = transform.warp(src, np.linalg.inv(M), output_shape=dsize[::-1])
         # return (warped_image * 255).astype(np.uint8)
 
-        scale_rate = 20000 / max_len
+        scale_rate = 30000 / max_len
+        M[0][2] = M[0][2] * scale_rate
+        M[1][2] = M[1][2] * scale_rate
         scale_img = cv2.resize(src, (int(src.shape[1] * scale_rate), int(src.shape[0] * scale_rate)))
         scale_img = cv2.warpPerspective(scale_img, M, scale_img.shape[:2][::-1], **kwargs)
         return cv2.resize(scale_img, src.shape[:2][::-1])

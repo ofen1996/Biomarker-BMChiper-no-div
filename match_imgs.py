@@ -372,6 +372,8 @@ def cut_fov_img_S2000(mrxs_path, save_path, camera_resolution=(2448, 2048)):
 
     if len(os.listdir(save_path)) >= FOV_SHAPE[0] * FOV_SHAPE[1]:
         print(save_path, "\n", "it has cuted, skip it.")
+        if conf.base_mode == "S2000-2":  # S2000-2减小尺寸做计算
+            return FOV_SHAPE[::-1] // 2, FOV_PIXES[::-1] // 2
         return FOV_SHAPE[::-1], FOV_PIXES[::-1]
 
     # 先裁剪全图
@@ -392,11 +394,14 @@ def cut_fov_img_S2000(mrxs_path, save_path, camera_resolution=(2448, 2048)):
             # show_img(im)
             if conf.base_mode == "S2000-2":
                 save_name = "ori_{}_{}.tif".format(FOV_SHAPE[1]-hi-1, FOV_SHAPE[0]-wi-1)
+                im = im[::2, ::2, ...]  # S2000-2减小尺寸做计算
                 tifffile.imwrite(os.path.join(save_path, save_name), np.rot90(im, k=2), compression="LZW")
             else:
                 save_name = "ori_{}_{}.tif".format(hi, wi)
                 tifffile.imwrite(os.path.join(save_path, save_name), im, compression="LZW")
             t3 = time.time()
+    if conf.base_mode == "S2000-2":  # S2000-2减小尺寸做计算
+        return FOV_SHAPE[::-1]//2, FOV_PIXES[::-1]//2
     return FOV_SHAPE[::-1], FOV_PIXES[::-1]
 
 
@@ -808,6 +813,8 @@ def new_stitch(pics_dir, reg_box, pic_shape=(2048, 2448), save_dir=None):
 
             ##############
             match_range = int(conf.conf.get("match-imgs", "match_range"))
+            if conf.base_mode == "S2000-2":  # S2000-2减小尺寸做计算
+                match_range = match_range // 2
             template = std_circle.circles_mask[template_start_loc[1]-match_range:template_start_loc[1]+img.shape[0]+match_range,
                                                template_start_loc[0]-match_range:template_start_loc[0]+img.shape[1]+match_range]
             if template.shape != tuple(np.asarray(img.shape[:2]) + match_range * 2):
@@ -936,14 +943,16 @@ def auto_correct_stitch_json(stitch_json, template_mask=None):
         error_num = abs(pred_loc[0] - real_loc[0]) + abs(pred_loc[1] - real_loc[1])
 
         print(f"pic_name: {pic_name}    real_loc: {real_loc}    pred_loc: {pred_loc}    error: {error_num}")
-        if error_num > 1.5 * int(conf.conf.get("match-imgs", "match_range")):
+        match_range = int(conf.conf.get("match-imgs", "match_range"))
+        if conf.base_mode == "S2000-2":  # S2000-2减小尺寸做计算
+            match_range = match_range // 2
+        if error_num > 1.5 * match_range:
             if template_mask is not None:
                 img_ori = tifffile.imread(os.path.join(stitch_json["pics_dir"], pic_name))
                 img_merge = cv2.cvtColor(img_ori[..., conf.stitch_channal], cv2.COLOR_GRAY2BGR)
                 # img_merge = cv2.cvtColor(img_ori[..., 0] | img_ori[..., 1] | img_ori[..., 2], cv2.COLOR_GRAY2BGR)
 
                 ###添加匹配过程###
-                match_range = int(conf.conf.get("match-imgs", "match_range"))
                 # match_range = 1
                 # match_range = 1
                 template = template_mask[
@@ -1114,6 +1123,10 @@ def draw_img_by_json(pics_dir, stitch_json_path, save_dir):
 def find_distance(img, M=None, micro_rate=int(conf.conf.get("match-imgs", "auto_std_d_sub_rate"))):
     auto_std_d_min = int(conf.conf.get("match-imgs", "auto_std_d_min"))//2
     auto_std_d_max = int(conf.conf.get("match-imgs", "auto_std_d_max"))//2
+
+    if conf.base_mode == "S2000-2":  # S2000-2减小尺寸做计算
+        auto_std_d_min = auto_std_d_min//2
+        auto_std_d_max = auto_std_d_max//2
     # print(micro_rate, auto_std_d_min, auto_std_d_max)
     # 利用寻峰方法找到一张二值化图的平均分界线距离
     if M is not None:

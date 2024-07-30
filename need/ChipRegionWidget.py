@@ -280,12 +280,15 @@ class ChipRegionWidget(QWidget):
             slide = zarr.open(image_filename, mode="r")
             img = Image.fromarray(slide[::2**mrxs_read_level, ::2**mrxs_read_level, ...])
         elif image_filename.endswith(".ome.tif"):
-            self.img_slide = tiffslide.open_slide(image_filename)
-            # 初始焦点设置
-            self.draw_argvs['draw_center_pos'] = [int(self.img_slide.level_dimensions[0][0] / 2),
-                                                  int(self.img_slide.level_dimensions[0][1] / 2)]
-            self.draw_argvs['win_center_pos'] = [int(self.width() / 2), int(self.height() / 2)]
-            return
+            slide = tiffslide.open_slide(image_filename)
+            img = slide.read_region((0, 0), level=mrxs_read_level, size=slide.level_dimensions[mrxs_read_level])
+
+            # self.img_slide = tiffslide.open_slide(image_filename)
+            # # 初始焦点设置
+            # self.draw_argvs['draw_center_pos'] = [int(self.img_slide.level_dimensions[0][0] / 2),
+            #                                       int(self.img_slide.level_dimensions[0][1] / 2)]
+            # self.draw_argvs['win_center_pos'] = [int(self.width() / 2), int(self.height() / 2)]
+            # return
         # 图片读取
         else:
             # img = tifffile.imread(self.image_filename, level=0)
@@ -397,7 +400,7 @@ class ChipRegionWidget(QWidget):
             max_level = self.draw_argvs['zoom_levels'][-1]
             ori_img_move_x = int(-move_x*max_level/curr_level+center_pos[0])
             ori_img_move_y = int(-move_y*max_level/curr_level+center_pos[1])
-            print(f"ori_img_move_x:{ori_img_move_x}, {ori_img_move_y}")
+            # print(f"ori_img_move_x:{ori_img_move_x}, {ori_img_move_y}")
             # 修正中心焦点位置坐标，其不得超出图片范围
             if self.img_slide is not None:
                 max_x = self.img_slide.level_dimensions[0][0]
@@ -416,7 +419,7 @@ class ChipRegionWidget(QWidget):
                 ori_img_move_y = max_y
             # 更新中心焦点坐标值
             self.draw_argvs['draw_center_pos'] = [ori_img_move_x, ori_img_move_y]
-            print(f"draw_center_pos:{self.draw_argvs['draw_center_pos']}, {curr_level}, {max_level}")
+            # print(f"draw_center_pos:{self.draw_argvs['draw_center_pos']}, {curr_level}, {max_level}")
             # 刷新界面
 
         # print(f"draw_center_pos:{self.draw_argvs['draw_center_pos']}")

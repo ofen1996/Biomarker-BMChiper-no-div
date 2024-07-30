@@ -71,6 +71,9 @@ class ChipRegionMain(QMainWindow, Ui_MainWindow):
         translator.load("src/zh_CN.qm")
         app.installTranslator(translator)
         self.retranslateUi(self)
+
+        if conf.machine in ("HDX", "3D"):
+            self.stitch_chip.setEnabled(False)
         pass
 
     def setupWinShow(self):
