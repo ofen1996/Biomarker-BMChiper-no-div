@@ -214,7 +214,7 @@ class ChipRegionMain(QMainWindow, Ui_MainWindow):
     # -------------------------------------------------------------------------
     # 用于提示用户保存项目
     def closeEvent(self, event):
-        result = QtWidgets.QMessageBox.question(self, "程序退出确认", "退出前请保存项目，确认要退出吗？",
+        result = QtWidgets.QMessageBox.question(self, "Exit", "Confirm that you want to exit.",
                                                     QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
         if (result == QtWidgets.QMessageBox.Yes):
             event.accept()

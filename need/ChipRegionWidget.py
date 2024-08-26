@@ -280,8 +280,9 @@ class ChipRegionWidget(QWidget):
             slide = zarr.open(image_filename, mode="r")
             img = Image.fromarray(slide[::2**mrxs_read_level, ::2**mrxs_read_level, ...])
         elif image_filename.endswith(".ome.tif"):
-            slide = tiffslide.open_slide(image_filename)
+            slide = openslide.open_slide(image_filename)
             img = slide.read_region((0, 0), level=mrxs_read_level, size=slide.level_dimensions[mrxs_read_level])
+            self.tif_desize = 2 ** mrxs_read_level
 
             # self.img_slide = tiffslide.open_slide(image_filename)
             # # 初始焦点设置

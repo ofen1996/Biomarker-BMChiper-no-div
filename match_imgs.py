@@ -457,7 +457,7 @@ class StdCircles:
 
 
     @staticmethod
-    def std_circles(ori_size, shape, d, r, tile_limit=(46, 46)):
+    def std_circles(ori_size, shape, d, r, tile_limit=(46, 46), M=None):
         # std_circles((1200, 1200), (30, 35), 35, 10)
         size = (ori_size[0] + 30, ori_size[1] + 30)
         circles_img = np.zeros(size, dtype=np.uint8)
@@ -473,15 +473,27 @@ class StdCircles:
         for y in range(total_circles_shape[1]):
             for x in range(total_circles_shape[0]):
 
-                rate = 0.8
-                if y % (shape[1] + 1) in (1, shape[1]) or x % (shape[0] + 1) in (1, shape[0]):
-                    rate = 1  # 对边缘最近的一行的权重提高，这样在计算时候可以让匹配尽量贴近边缘，避免边缘不完整图像匹配出错
                 first_loc = first_circle_loc
                 if y % 2 == 0:
                     first_loc = first_circle_loc - (d / 2, 0)
                 tmp_center = (first_loc + (x * delta_x, y * delta_y)).astype(int)
                 # circle_centers.append(tmp_center.astype(int))
                 circle_centers[x, y, :] = tmp_center
+
+        # 如果存在M，则做一下变换
+        if M is not None:  # 对标准板做逆变换，使其在缝合过程避免变换丢失数据，最后再变换回正确图案
+            M_inv = np.linalg.inv(M)
+            # 先调换一下维度顺序，在转换，再换回来
+            circle_centers = np.round(cv2.perspectiveTransform(
+                np.array(circle_centers, dtype=np.float32).reshape(-1, 1, 2), M_inv).reshape(
+                *circle_centers.shape)).astype(int)
+
+        for y in range(total_circles_shape[1]):
+            for x in range(total_circles_shape[0]):
+
+                rate = 0.8
+                if y % (shape[1] + 1) in (1, shape[1]) or x % (shape[0] + 1) in (1, shape[0]):
+                    rate = 1  # 对边缘最近的一行的权重提高，这样在计算时候可以让匹配尽量贴近边缘，避免边缘不完整图像匹配出错
                 if y >= (shape[1] + 1) * tile_limit[1] or x >= (shape[0] + 1) * tile_limit[0]:
                     # 超过芯片边界的不要
                     continue
@@ -497,15 +509,11 @@ class StdCircles:
                 if y >= (shape[1] + 1) * tile_limit[1] - 5 and x <= 5:
                     # 左下角缺口
                     continue
+                tmp_center = circle_centers[x, y, :]
                 circles_mask = cv2.circle(circles_mask, tuple(tmp_center), r+r-1, int(255 * rate), -1)
                 # circles_mask = cv2.circle(circles_mask, tuple(tmp_center), r-3, int(255 * rate * 0.3), -1)
                 circles_img = cv2.circle(circles_img, tuple(tmp_center), r, 255, 1)
-        # print(circle_centers)
-        # for center in circle_centers.reshape(total_circles_shape[0] * total_circles_shape[1], -1):
-        #     circles_mask = cv2.circle(circles_mask, tuple(center), r, 255, -1)
-        #     circles_img = cv2.circle(circles_img, tuple(center), r, 255, 1)
-        # show_img(circles_img)
-        # show_img(circles_mask)
+
         circles_mask = cv2.erode(circles_mask, cv2.getStructuringElement(cv2.MORPH_ERODE, (r-1, r-1)))
         circles_mask = cv2.bitwise_not(circles_mask)
         return [circles_img[:ori_size[0], :ori_size[1]],
