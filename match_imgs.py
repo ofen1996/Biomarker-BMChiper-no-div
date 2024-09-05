@@ -1213,7 +1213,7 @@ def draw_part_circle_pic(circle_centers, stitch_json, start_loc, shape=(conf.bar
                 # 不同块的分割线
                 continue
             offset_loc = circle_centers[x, y] - start_loc
-            cv2.circle(circle_img, tuple(offset_loc), std_r, (155, 155, 155), 1)
+            cv2.circle(circle_img, tuple(offset_loc), std_r, (100, 100, 100), 1)
     return circle_img
 
 
@@ -1233,8 +1233,9 @@ def correct_img(wrong_point_norm, stitch_json_path):
     real_point = np.round(np.dot(M_inv, np.array([*ori_point, 1]))).astype(int)[:2]
     # 找到错误图像
     error_img_name, error_img_loc = find_error_pic(real_point, stitch_json)
-    error_img = tifffile.imread(os.path.join(pic_dir, error_img_name))[..., conf.stitch_channal]
-    error_img = cv2.cvtColor(error_img, cv2.COLOR_GRAY2RGB)
+    error_img = tifffile.imread(os.path.join(pic_dir, error_img_name))
+    # error_img = tifffile.imread(os.path.join(pic_dir, error_img_name))[..., conf.stitch_channal]
+    # error_img = cv2.merge([np.zeros_like(error_img), error_img, np.zeros_like(error_img)])
     circle_centers = np.load(stitch_json["std_circles_center_path"])
     circle_img = draw_part_circle_pic(circle_centers, stitch_json, error_img_loc, shape=(conf.barcode_size_x, conf.barcode_size_y))
     # add_img = np.where(circle_img > 0, circle_img, error_img)

@@ -27,13 +27,13 @@ class FileDirBase():
             win, '选择文件', win.cwd, f'img({type_str});;All Files (*)')
 
         if fileName_choose == "":
-            print("\n取消选择")
+            # print("\n取消选择")
             return None
 
         dir_choose, _ = os.path.split(fileName_choose)
         win.cwd = dir_choose
 
-        print(f"你选择的文件为:{fileName_choose}")
+        # print(f"你选择的文件为:{fileName_choose}")
         return fileName_choose
     pass
     # 打开目录
@@ -47,10 +47,10 @@ class FileDirBase():
         dir_choose = QFileDialog.getExistingDirectory(win, "选取文件夹", win.cwd)
 
         if dir_choose == "":
-            print("\n取消选择")
+            # print("\n取消选择")
             return None
 
-        print(f"你选择的文件夹为:{dir_choose}")
+        # print(f"你选择的文件夹为:{dir_choose}")
         win.cwd = dir_choose
         return dir_choose
 
