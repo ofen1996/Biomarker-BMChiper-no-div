@@ -713,7 +713,7 @@ def new_stitch(pics_dir, reg_box, pic_shape=(2048, 2448), save_dir=None):
     # std_d = rect_points[2][0] / ((31*46)-1)
     # std_d = (rect_points[2][0] - pic_shape[1]*overlap_rate*(46-1)) / ((31*46)-1)
     # std_d = 14.83
-    # std_d = 14.836363636363636
+    # std_d = 10.8108
     std_d = calculate_std_d(pics_dir, stitch_json)
 
     if conf.std_d == "auto":
@@ -930,8 +930,8 @@ def auto_correct_stitch_json(stitch_json, template_mask=None):
     model = LinearRegression()
     model.fit(X, Y)
 
-    # 做一次数据筛选，剔除误差最大的20%
-    filter_num = len(X) // 5
+    # 做一次数据筛选，剔除误差最大的50%
+    filter_num = len(X) // 2
     error_bar = np.sum(np.abs(Y - model.predict(X)), axis=1)
     filter_index = np.argsort(error_bar)[-filter_num:]
     X_filtered = np.delete(X, filter_index, axis=0)
@@ -1113,7 +1113,7 @@ def draw_img_by_json(pics_dir, stitch_json_path, save_dir):
 
     tifffile.imwrite(os.path.join(save_dir, "img_dist.tif"),
                      img_dist,
-                     compression="LZW")
+                     compression=conf.compression_mode)
 
     # 画底板
     from need.CorrectWholeImg import cal_zoom_rate, gen_std_board_loc, gen_std_board_img
@@ -1122,7 +1122,7 @@ def draw_img_by_json(pics_dir, stitch_json_path, save_dir):
     img_dist_with_board = gen_std_board_img(img_dist.shape[1], img_dist.shape[0], std_kp_loc, save_dir,
                                             base_img=img_dist, mask_color=conf.std_mask_color)
     tifffile.imwrite(os.path.join(save_dir, "img_dist_with_board.tif"), img_dist_with_board,
-                     compression=conf.compression_mode)
+                     compression="jpeg")
     ##
 
     return stitch_img
@@ -1156,10 +1156,11 @@ def find_distance(img, M=None, micro_rate=int(conf.conf.get("match-imgs", "auto_
     # import matplotlib.pyplot as plt
     # plt.plot(fft_signal)
     # plt.plot(x_sum)
+    # plt.show()
     f = np.argmax(fft_signal) / micro_rate
 
-    # show_img(img_b)
     # plt.close()
+    # show_img(img_b)
     return len(x_sum)/f * 2  # x方向统计纵轴频率间距，由于微球是错行相隔，所以频率会翻倍，所以计算“周期”要*2
 
 
@@ -1256,16 +1257,17 @@ def correct_img(wrong_point_norm, stitch_json_path):
 
 if __name__ == '__main__':
     pass
-    # pic_dir = r"E:\test\志盈\图像-zarr"
-    # reg_box = [[846, 2412], [27670, 2352], [27698, 29636], [852, 29692]]
-    # stitch_json = cut_and_stitch(pic_dir, reg_box)
+    pic_dir = r"E:\test\tmp\20240926-DI04DN09F2-A4-YJR-K-20X-FL.mrxs"
+    reg_box = [[5240, 4520], [26348, 4356], [26500, 25528], [5384, 25700]]
+    stitch_json = cut_and_stitch(pic_dir, reg_box)
 
     # pics = r"E:\test\ori_2_7.tif"
     # stitch_json = load_json(r"E:\test\stitch_json.json")
     # M = np.array(stitch_json["M"])
     # img = tifffile.imread(pics)
     # mean_distance = find_distance(img, M=M)
-
-    img=r"E:\test\tmp\20x DAPI Brightfield 2024.04.18\merge_whole-Cut\ori_1_5.tif"
-    img = tifffile.imread(img)
-    a = find_distance(img)
+    #
+    # img=r"E:\test\tmp\0919-20240711-DG04DN04F6-B2-ST-T3-20X-FL-20240919-113110120-Cut\ori_2_9.tif"
+    # img = tifffile.imread(img)
+    # a = find_distance(img)
+    # print(a)
