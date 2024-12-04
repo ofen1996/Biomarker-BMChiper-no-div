@@ -6,11 +6,15 @@ import traceback
 import numpy as np
 import tifffile
 from PIL import Image
+
+from need.ofen_tool import load_json
+
 Image.MAX_IMAGE_PIXELS = 3000000000
 import cv2
 import matplotlib.pyplot as plt
 
 import match_imgs
+import match_imgs_ome
 
 from PyQt5 import QtWidgets
 import os
@@ -286,7 +290,11 @@ class ChipRegionMain(QMainWindow, Ui_MainWindow):
                     conf.conf.write(conf_ini)
 
             conf.reload()  # 重新读取配置文件，以支持热修改
-            stitch_path = match_imgs.cut_and_stitch(self.widget_right.image_filename, corners.tolist())
+            if self.widget_right.image_filename.endswith('.ome.tif'):
+                stitch_path = match_imgs_ome.cut_and_stitch(self.widget_right.image_filename, corners.tolist())
+            else:
+                stitch_path = match_imgs.cut_and_stitch(self.widget_right.image_filename, corners.tolist())
+
             # camera_resolutions = [(2448, 2048), (2048, 2048)]
             # camera_resolution = camera_resolutions[self.comboBox_camera_type.currentIndex()]
             # print("camera_resolution:" + str(camera_resolution))
@@ -338,7 +346,12 @@ def correct_match_result():
     wrong_point_norm = np.array(wrong_point) / whole_size
     stitch_json_dir = os.path.split(window.widget_right.image_filename)[0]
     stitch_json_path = os.path.join(stitch_json_dir, "stitch_json.json")
-    match_imgs.correct_img(wrong_point_norm, stitch_json_path)
+
+    stitch_json = load_json(stitch_json_path)
+    if "pyramid_img_path" in stitch_json:  # 如果是ome格式
+        match_imgs_ome.correct_img(wrong_point_norm, stitch_json_path)
+    else:
+        match_imgs.correct_img(wrong_point_norm, stitch_json_path)
 
 
 

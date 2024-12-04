@@ -11,7 +11,7 @@ import cv2
 from need.ofen_tool import show_img
 
 vipsbin = r'D:\work\python\vips-dev-8.15\bin'
-os.environ['PATH'] = vipsbin + ';' + os.environ['PATH']
+os.environ['PATH'] = r"./src/vips-dev-8.15/bin" + ';' + vipsbin + ';' + os.environ['PATH']
 import pyvips
 import openslide
 ## 海德星的小图拼接成大图

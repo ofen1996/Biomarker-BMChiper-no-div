@@ -209,7 +209,8 @@ def cut_fov_img_tif(tif_path, save_path, camera_resolution=(1216, 1012)):
 
     whole_img = tifffile.imread(tif_path)
     # whole_img = cv2.resize(whole_img, (23040, 22528))
-
+    if whole_img.shape[0] == 3:
+        whole_img = np.transpose(whole_img, (1, 2, 0))  # ome图像维度转换一下
     FOV_SHAPE = (np.asarray(whole_img.shape[:2][::-1]) / FOV_PIXES).astype(int)
 
     if len(os.listdir(save_path)) >= FOV_SHAPE[0] * FOV_SHAPE[1]:

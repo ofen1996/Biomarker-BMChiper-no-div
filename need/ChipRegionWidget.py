@@ -280,8 +280,10 @@ class ChipRegionWidget(QWidget):
             slide = zarr.open(image_filename, mode="r")
             img = Image.fromarray(slide[::2**mrxs_read_level, ::2**mrxs_read_level, ...])
         elif image_filename.endswith(".ome.tif"):
-            slide = openslide.open_slide(image_filename)
-            img = slide.read_region((0, 0), level=mrxs_read_level, size=slide.level_dimensions[mrxs_read_level])
+            # slide = openslide.open_slide(image_filename)
+            # img = slide.read_region((0, 0), level=mrxs_read_level, size=slide.level_dimensions[mrxs_read_level])
+            img = np.transpose(tifffile.imread(image_filename, level=mrxs_read_level), (1, 2, 0))  # ome图像维度转换一下
+            img = Image.fromarray(img)
             self.tif_desize = 2 ** mrxs_read_level
 
             # self.img_slide = tiffslide.open_slide(image_filename)
