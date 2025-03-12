@@ -71,13 +71,15 @@ def generate_matrix(M, N):
 def gen_HDX_tile_images(pics_dir, tiles_across, tiles_down, RGB=False, rot=90):
 
     tiles = [pyvips.Image.new_from_file(
-        os.path.join(pics_dir, f"IMG{str(y).zfill(3)}x{str(x).zfill(3)}.tif"))
+        os.path.join(pics_dir, f"tile_x{str(x).zfill(3)}_y{str(y).zfill(3)}.tif"))
         for y in range(1, tiles_down + 1) for x in range(1, tiles_across + 1)]
     whole_img = pyvips.Image.arrayjoin(tiles, across=tiles_across, vspacing=0)
     # whole_img = pyvips.Image.arrayjoin(tiles[30:31])
     # whole_img = whole_img.scRGB2BW(depth=30)  //二值化
     # whole_img = whole_img[0]
     whole_img = whole_img.copy()
+    #
+    # whole_img = whole_img.flipver()
     if rot == 90:
         whole_img = whole_img.rot90()  # 海德星图像需要转90度
     elif rot == 180:
@@ -92,8 +94,8 @@ def gen_HDX_tile_images(pics_dir, tiles_across, tiles_down, RGB=False, rot=90):
 def HDX_image_prepare(pics_dir):
     img_names = os.listdir(pics_dir)
 
-    rows = [int(name[3:6]) for name in img_names if name.endswith(".tif")]
-    cols = [int(name[7:10]) for name in img_names if name.endswith(".tif")]
+    rows = [int(name[11:14]) for name in img_names if name.endswith(".tif")]
+    cols = [int(name[6:9]) for name in img_names if name.endswith(".tif")]
     # 设置矩阵形状
     row, col = max(rows), max(cols)
     shape_r_c = (row, col)
@@ -133,8 +135,11 @@ def generate_whole_tif(pics_dirs, save_path=None, compression='jpeg', rot=0):
     whole_img = whole_img.copy()
     whole_img.set_type(pyvips.GValue.gint_type, "tiles_n_down", tiles_across)  # 海德星旋转90°，所以长宽都要反转一下
     whole_img.set_type(pyvips.GValue.gint_type, "tiles_n_across", tiles_down)
-    whole_img.set_type(pyvips.GValue.gint_type, "tiles_width", img_height)
-    whole_img.set_type(pyvips.GValue.gint_type, "tiles_height", img_width)
+
+    if rot in [90, 270]:
+        img_height, img_width = img_width, img_height
+    whole_img.set_type(pyvips.GValue.gint_type, "tiles_width", img_width)
+    whole_img.set_type(pyvips.GValue.gint_type, "tiles_height", img_height)
 
     # whole_img.tiffsave(save_path, compression=compression, tile=True,
     #                    tile_width=512, tile_height=512, Q=90,

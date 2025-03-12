@@ -134,6 +134,7 @@ class ChipRegionMain(QMainWindow, Ui_MainWindow):
                 self.new_stitch_channel.setEnabled(True)
             self.widget_right.read_image(filename_choose, mrxs_read_level=conf.mrxs_read_level)
         except Exception as e:
+            print(traceback.format_exc(), e)
             print("Error:", e)
         # 记忆选择的路径
         base_dir = os.path.split(filename_choose)[0]

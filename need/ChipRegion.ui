@@ -126,6 +126,16 @@
                      <string>S2000-2</string>
                     </property>
                    </item>
+                   <item>
+                    <property name="text">
+                     <string>S4000-A</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>S4000-B</string>
+                    </property>
+                   </item>
                   </widget>
                  </item>
                 </layout>

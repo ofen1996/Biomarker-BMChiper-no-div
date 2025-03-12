@@ -5,15 +5,15 @@ import time
 import numpy as np
 from PIL import Image
 import os
-import tifffile
-import tiffslide
+# import tifffile
+# import tiffslide
 import cv2
-from need.ofen_tool import show_img
+# from need.ofen_tool import show_img
 
 vipsbin = r'D:\work\python\vips-dev-8.15\bin'
 os.environ['PATH'] = r"./src/vips-dev-8.15/bin" + ';' + vipsbin + ';' + os.environ['PATH']
 import pyvips
-import openslide
+# import openslide
 ## 海德星的小图拼接成大图
 
 

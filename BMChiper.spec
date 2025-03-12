@@ -8,7 +8,7 @@ a = Analysis(
     ['BMChiper.py'],
     pathex=[],
     binaries=[],
-    datas=[('./src/imagecodecs','imagecodecs'),('./model','model'),('./need','need'),('./setting','setting'),('./src','src'),('./sklearn/utils','sklearn/utils')],
+    datas=[('./src/vips-dev-8.15/bin','./'),('./src/imagecodecs','imagecodecs'),('./model','model'),('./need','need'),('./setting','setting'),('./src','src'),('./sklearn/utils','sklearn/utils')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -38,6 +38,7 @@ exe = EXE(
     codesign_identity=None,
     icon='src\\bmk_logo.ico',
     entitlements_file=None,
+    contents_directory='.',
 )
 coll = COLLECT(
     exe,

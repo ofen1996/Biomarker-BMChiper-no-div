@@ -282,7 +282,9 @@ class ChipRegionWidget(QWidget):
         elif image_filename.endswith(".ome.tif"):
             # slide = openslide.open_slide(image_filename)
             # img = slide.read_region((0, 0), level=mrxs_read_level, size=slide.level_dimensions[mrxs_read_level])
-            img = np.transpose(tifffile.imread(image_filename, level=mrxs_read_level), (1, 2, 0))  # ome图像维度转换一下
+            img = tifffile.imread(image_filename, level=mrxs_read_level)
+            print(img.shape)
+            img = np.transpose(img, (1, 2, 0))  # ome图像维度转换一下
             img = Image.fromarray(img)
             self.tif_desize = 2 ** mrxs_read_level
 
@@ -302,6 +304,9 @@ class ChipRegionWidget(QWidget):
                     self.tif_desize = 2
                 else:
                     img = tif.asarray(level=0)
+                    self.tif_desize = 1
+            if img.dtype == np.uint16:
+                img = (img / img.max() *255).astype(np.uint8)
             img = Image.fromarray(img)
         # 图片缩放
         level_num = self.draw_argvs['zoom_level_num']

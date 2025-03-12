@@ -1004,7 +1004,7 @@ def draw_part_circle_pic(circle_centers, stitch_json, start_loc, shape=(conf.bar
                 # 不同块的分割线
                 continue
             offset_loc = circle_centers[x, y] - start_loc
-            cv2.circle(circle_img, tuple(offset_loc), std_r, (155, 155, 155), 1)
+            cv2.circle(circle_img, tuple(offset_loc), std_r, (1, 155, 1), 1)
     return circle_img
 
 
@@ -1048,14 +1048,14 @@ def correct_img(wrong_point_norm, stitch_json_path):
 
 if __name__ == '__main__':
     pass
-    # pyramid_img_path = r"Z:\work\tmp\CB22CN04F3_S2000-2\Images.ome.tif"
-    # reg_box = [[9003, 7057], [63909, 7080], [63901, 80371], [8979, 80351]]
+    pyramid_img_path = r"E:\test\tmp\merge.ome.tif"
+    reg_box = [[1658, 2248], [14113, 2222], [14136, 14689], [1693, 14713]]
     # # pyramid_img_path = r"Z:\work\tmp\merge.ome.tif"
     # # pyramid_img_path = r"/share/nas1/ouyangfeng/work/tmp/merge.ome.tif"
     # # reg_box = [[1196, 5529], [91849, 5501], [91900, 112668], [1246, 112690]]
     # # whole_img = pyvips.Image.new_from_file(pyramid_img_path)
     #
-    # stitch_img = cut_and_stitch(pyramid_img_path, reg_box)
+    stitch_img = cut_and_stitch(pyramid_img_path, reg_box)
 
     # img = BmTiff.read_pyramid_from_file(r"Z:\work\tmp\50_60_decode\10X 5060细胞分割11.12\DG31EN03F2\HE\IMG002x007.tif")
     # img = BmTiff.read_pyramid_from_file(r"Z:\work\tmp\DI29FN01F1\IMG015x007.tif")
@@ -1067,13 +1067,13 @@ if __name__ == '__main__':
     # wrong_point_norm = (7528/24770, 10838/24911)  # 为了避免坐标位置尺度不一致，采用归一化的坐标位置
     # correct_img(wrong_point_norm, stitch_json_path)
 
-    ome_tif_path = r"E:\test\tmp\small_merge\img_dist_merge.ome.tif"
-    output_tif_path = r"E:\test\tmp\small_merge\img_dist.tif"
-
-    # 目标高度
-    out_size_rate_w_h = ((conf.barcode_size_x + 1) * 2 * conf.base_size_x) / (
-                (conf.barcode_size_y + 1) * np.sqrt(3) * conf.base_size_y)
-    # img_dist = cv2.resize(img_dist, (int(conf.out_size * out_size_rate_w_h), conf.out_size))
-    new_size = (int(conf.out_size * out_size_rate_w_h), conf.out_size)
-
-    BmTiff.save_special_size(ome_tif_path, output_tif_path, new_size[0], new_size[1], compression="lzw")
+    # ome_tif_path = r"E:\test\tmp\small_merge\img_dist_merge.ome.tif"
+    # output_tif_path = r"E:\test\tmp\small_merge\img_dist.tif"
+    #
+    # # 目标高度
+    # out_size_rate_w_h = ((conf.barcode_size_x + 1) * 2 * conf.base_size_x) / (
+    #             (conf.barcode_size_y + 1) * np.sqrt(3) * conf.base_size_y)
+    # # img_dist = cv2.resize(img_dist, (int(conf.out_size * out_size_rate_w_h), conf.out_size))
+    # new_size = (int(conf.out_size * out_size_rate_w_h), conf.out_size)
+    #
+    # BmTiff.save_special_size(ome_tif_path, output_tif_path, new_size[0], new_size[1], compression="lzw")

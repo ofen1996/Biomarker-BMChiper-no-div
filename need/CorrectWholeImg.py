@@ -88,7 +88,9 @@ def locate_split(div_sum, base_num):
             continue
         if y_sum >= 0.2 and tmp_end >= tmp_start:
             # 上升沿
-            # print("up", i)
+            if i == 9800:
+                pass
+            print("up", i)
             tmp_start = i
             tmp_end = tmp_start + 1
             for j in range(tmp_end, tmp_end + (len(div_sum) // 50)):
@@ -350,7 +352,7 @@ def correct_whole_img(img_path, detect_channel=None):
 
 
 if __name__ == '__main__':
-    img_path = r"C:\Users\ofen\Documents\WXWork\1688855473391904\Cache\File\2024-02\Result-2024-02-01-133859.1_chip.tif"
+    img_path = r"E:\test\tmp\309\D200_309_GEX_HE_20241205.vsi.Collection\D200_309_GEX_HE_20241205_20x_BF_01_chip.tif"
     correct_whole_img(img_path, detect_channel=0)
 
 

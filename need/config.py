@@ -97,6 +97,20 @@ class Config:
             self.barcode_size_y = 51
             self.base_size_x = 42
             self.base_size_y = 43
+        if self.base_mode == "S4000-A":
+            self.barcode_size_x = 45
+            self.barcode_size_y = 51
+            self.base_size_x = 70
+            self.base_size_y = 75
+            self.row = 75
+            self.column = 70
+        elif self.base_mode == "S4000-B":
+            self.barcode_size_x = 45
+            self.barcode_size_y = 51
+            self.base_size_x = 101
+            self.base_size_y = 134
+            self.row = 134
+            self.column = 101
 
 
 

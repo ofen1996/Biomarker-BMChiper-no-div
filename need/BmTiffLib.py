@@ -68,9 +68,12 @@ def save_pyramid_tif(im, save_path, compression="jpeg",  tile_width=512, tile_he
         </Image>
     </OME>""")
 
+    bigtiff = False
+    if im.width > 60000:
+        bigtiff = True
     im.tiffsave(save_path, compression=compression, tile=True,
                 tile_width=tile_width, tile_height=tile_height,
-                pyramid=True, properties=True, bigtiff=True)
+                pyramid=True, properties=True, bigtiff=bigtiff)
 
 
 def get_property_value(im, property_name):
