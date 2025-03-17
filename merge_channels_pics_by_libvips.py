@@ -71,7 +71,8 @@ def generate_matrix(M, N):
 def gen_HDX_tile_images(pics_dir, tiles_across, tiles_down, RGB=False, rot=90):
 
     tiles = [pyvips.Image.new_from_file(
-        os.path.join(pics_dir, f"tile_x{str(x).zfill(3)}_y{str(y).zfill(3)}.tif"))
+        # os.path.join(pics_dir, f"ori_{str(y)}_{str(x)}.tif"))
+        os.path.join(pics_dir, f"IMG{str(y).zfill(3)}x{str(x).zfill(3)}.tif"))
         for y in range(1, tiles_down + 1) for x in range(1, tiles_across + 1)]
     whole_img = pyvips.Image.arrayjoin(tiles, across=tiles_across, vspacing=0)
     # whole_img = pyvips.Image.arrayjoin(tiles[30:31])
@@ -94,8 +95,8 @@ def gen_HDX_tile_images(pics_dir, tiles_across, tiles_down, RGB=False, rot=90):
 def HDX_image_prepare(pics_dir):
     img_names = os.listdir(pics_dir)
 
-    rows = [int(name[11:14]) for name in img_names if name.endswith(".tif")]
-    cols = [int(name[6:9]) for name in img_names if name.endswith(".tif")]
+    rows = [int(name[3:6]) for name in img_names if name.endswith(".tif")]
+    cols = [int(name[7:10]) for name in img_names if name.endswith(".tif")]
     # 设置矩阵形状
     row, col = max(rows), max(cols)
     shape_r_c = (row, col)
@@ -111,6 +112,7 @@ def generate_whole_tif(pics_dirs, save_path=None, compression='jpeg', rot=0):
 
     # 遍历目录，根据海德星格式查询shape，文件名等参数, 图像迭代器
     (tiles_down, tiles_across), (img_width, img_height) = HDX_image_prepare(pics_dirs[0])
+    # (tiles_down, tiles_across), (img_width, img_height) = (15, 12), (2424, 2024)
     if len(pics_dirs) < 1:
         raise Exception(f"input pics_dis < 1. pics_dir:{pics_dirs}")
     t1 = time.time()
