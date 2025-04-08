@@ -4,6 +4,8 @@ import os
 
 class Config:
     def __init__(self, ini_path):
+        self.BH1000_rot = None
+        self.BH1000_compression = None
         self.ini_path = ini_path
         self.conf = None
         self.machine = None
@@ -57,6 +59,10 @@ class Config:
             self.mrxs_read_level = int(self.conf.get("default", "mrxs_read_level"))
         if self.conf.has_option("default", "std_d"):
             self.std_d = self.conf.get("default", "std_d")
+        if self.conf.has_option("default", "BH1000_compression"):
+            self.BH1000_compression = self.conf.get("default", "BH1000_compression")
+        if self.conf.has_option("default", "BH1000_rot"):
+            self.BH1000_rot = self.conf.get("default", "BH1000_rot")
 
         self.calculate_size = int(self.conf.get("correct-whole-img", "calculate_size"))
         self.out_size = int(self.conf.get("correct-whole-img", "max_out_size"))

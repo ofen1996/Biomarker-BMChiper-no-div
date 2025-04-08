@@ -1048,14 +1048,14 @@ def correct_img(wrong_point_norm, stitch_json_path):
 
 if __name__ == '__main__':
     pass
-    pyramid_img_path = r"E:\test\tmp\merge.ome.tif"
-    reg_box = [[1658, 2248], [14113, 2222], [14136, 14689], [1693, 14713]]
+    pyramid_img_path = r"C:\Users\ofen\Documents\WXWork\1688855473391904\Cache\File\2025-04\result.ome.tif"
+    # reg_box = [[1658, 2248], [14113, 2222], [14136, 14689], [1693, 14713]]
     # # pyramid_img_path = r"Z:\work\tmp\merge.ome.tif"
     # # pyramid_img_path = r"/share/nas1/ouyangfeng/work/tmp/merge.ome.tif"
     # # reg_box = [[1196, 5529], [91849, 5501], [91900, 112668], [1246, 112690]]
     # # whole_img = pyvips.Image.new_from_file(pyramid_img_path)
     #
-    stitch_img = cut_and_stitch(pyramid_img_path, reg_box)
+    # stitch_img = cut_and_stitch(pyramid_img_path, reg_box)
 
     # img = BmTiff.read_pyramid_from_file(r"Z:\work\tmp\50_60_decode\10X 5060细胞分割11.12\DG31EN03F2\HE\IMG002x007.tif")
     # img = BmTiff.read_pyramid_from_file(r"Z:\work\tmp\DI29FN01F1\IMG015x007.tif")

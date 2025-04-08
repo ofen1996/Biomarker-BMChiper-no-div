@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>847</width>
-    <height>581</height>
+    <width>845</width>
+    <height>574</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -15,25 +15,6 @@
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout_main">
-    <item row="0" column="1">
-     <widget class="QWidget" name="widget_right" native="true">
-      <layout class="QGridLayout" name="gridLayout_9">
-       <item row="1" column="1">
-        <spacer name="horizontalSpacer">
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>40</width>
-           <height>20</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-      </layout>
-     </widget>
-    </item>
     <item row="0" column="0">
      <widget class="QScrollArea" name="left_scrollArea">
       <property name="widgetResizable">
@@ -44,8 +25,8 @@
         <rect>
          <x>0</x>
          <y>0</y>
-         <width>410</width>
-         <height>519</height>
+         <width>409</width>
+         <height>512</height>
         </rect>
        </property>
        <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -65,8 +46,8 @@
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>392</width>
-             <height>449</height>
+             <width>391</width>
+             <height>442</height>
             </rect>
            </property>
            <attribute name="label">
@@ -92,6 +73,13 @@
                 <widget class="QPushButton" name="load_he_pic">
                  <property name="text">
                   <string>加载HE图片</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QPushButton" name="Load_BH1000">
+                 <property name="text">
+                  <string>Load BH1000 Image</string>
                  </property>
                 </widget>
                </item>
@@ -289,8 +277,8 @@
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>392</width>
-             <height>449</height>
+             <width>391</width>
+             <height>442</height>
             </rect>
            </property>
            <attribute name="label">
@@ -340,6 +328,25 @@
       </widget>
      </widget>
     </item>
+    <item row="0" column="1">
+     <widget class="QWidget" name="widget_right" native="true">
+      <layout class="QGridLayout" name="gridLayout_9">
+       <item row="1" column="1">
+        <spacer name="horizontalSpacer">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+    </item>
    </layout>
   </widget>
   <widget class="QMenuBar" name="menubar">
@@ -347,7 +354,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>847</width>
+     <width>845</width>
      <height>22</height>
     </rect>
    </property>
@@ -384,8 +391,8 @@
    <slot>collect_point_left_top_cao()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>204</x>
-     <y>209</y>
+     <x>213</x>
+     <y>238</y>
     </hint>
     <hint type="destinationlabel">
      <x>332</x>
@@ -400,8 +407,8 @@
    <slot>collect_point_left_bottom_cao()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>192</x>
-     <y>238</y>
+     <x>210</x>
+     <y>267</y>
     </hint>
     <hint type="destinationlabel">
      <x>334</x>
@@ -432,8 +439,8 @@
    <slot>collect_point_right_bottom_cao()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>387</x>
-     <y>238</y>
+     <x>399</x>
+     <y>267</y>
     </hint>
     <hint type="destinationlabel">
      <x>335</x>
@@ -448,8 +455,8 @@
    <slot>collect_point_right_top_cao()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>387</x>
-     <y>209</y>
+     <x>399</x>
+     <y>238</y>
     </hint>
     <hint type="destinationlabel">
      <x>335</x>
@@ -464,8 +471,8 @@
    <slot>save_chip_region_rect_cao()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>199</x>
-     <y>268</y>
+     <x>216</x>
+     <y>297</y>
     </hint>
     <hint type="destinationlabel">
      <x>332</x>
@@ -480,8 +487,8 @@
    <slot>stitch_chip_cao()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>305</x>
-     <y>297</y>
+     <x>322</x>
+     <y>326</y>
     </hint>
     <hint type="destinationlabel">
      <x>498</x>
@@ -496,8 +503,8 @@
    <slot>correct_whole_cao()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>251</x>
-     <y>355</y>
+     <x>268</x>
+     <y>384</y>
     </hint>
     <hint type="destinationlabel">
      <x>423</x>
@@ -512,8 +519,8 @@
    <slot>choose_channel_show_cao()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>387</x>
-     <y>151</y>
+     <x>399</x>
+     <y>180</y>
     </hint>
     <hint type="destinationlabel">
      <x>423</x>
@@ -528,8 +535,8 @@
    <slot>new_stitch_channel_cao()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>244</x>
-     <y>326</y>
+     <x>261</x>
+     <y>355</y>
     </hint>
     <hint type="destinationlabel">
      <x>423</x>
@@ -544,8 +551,8 @@
    <slot>correct_match_result_cao()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>233</x>
-     <y>399</y>
+     <x>241</x>
+     <y>486</y>
     </hint>
     <hint type="destinationlabel">
      <x>423</x>
@@ -560,8 +567,8 @@
    <slot>change_Smode_cao()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>271</x>
-     <y>115</y>
+     <x>399</x>
+     <y>153</y>
     </hint>
     <hint type="destinationlabel">
      <x>423</x>
@@ -576,12 +583,28 @@
    <slot>change_std_d_cao()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>271</x>
-     <y>169</y>
+     <x>399</x>
+     <y>207</y>
     </hint>
     <hint type="destinationlabel">
      <x>423</x>
      <y>290</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>Load_BH1000</sender>
+   <signal>clicked()</signal>
+   <receiver>MainWindow</receiver>
+   <slot>open_BH1000_img_cao()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>216</x>
+     <y>116</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>422</x>
+     <y>286</y>
     </hint>
    </hints>
   </connection>
@@ -601,5 +624,6 @@
   <slot>correct_match_result_cao()</slot>
   <slot>change_std_d_cao()</slot>
   <slot>change_Smode_cao()</slot>
+  <slot>open_BH1000_img_cao()</slot>
  </slots>
 </ui>

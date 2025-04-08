@@ -21,7 +21,7 @@ import pyvips
 
 def save_pyramid_tif(im, save_path, compression="jpeg",  tile_width=512, tile_height=512):
     # openslide will add an alpha ... drop it
-    if im.hasalpha():
+    if im.bands == 4:
         im = im[:-1]
 
     image_height = im.height
@@ -151,6 +151,47 @@ def generate_whole_tif(pics_dirs, save_path=None, compression='jpeg', rot=0):
     print(f"Saving pyramid cost {t3-t2} s")
 
     return save_path
+
+
+def rotate_whole_tif(ome_path, save_path=None, compression='jpeg', rot=90):
+    if save_path is None:
+        save_path = ome_path.replace(".ome.tif", f"_rot{rot}.ome.tif")
+    import need.BmTiffLib as BmTiff
+    t2 = time.time()
+    whole_img = BmTiff.read_3_page_as_bands(ome_path)
+    img_width = int(BmTiff.get_property_value(whole_img, "tiles_width"))
+    img_height = int(BmTiff.get_property_value(whole_img, "tiles_height"))
+    tiles_across = int(BmTiff.get_property_value(whole_img, "tiles_n_across"))
+    tiles_down = int(BmTiff.get_property_value(whole_img, "tiles_n_down"))
+
+    whole_img = whole_img.copy()
+    if rot == 90:
+        whole_img = whole_img.rot90()  # 海德星图像需要转90度
+    elif rot == 180:
+        whole_img = whole_img.rot180()
+    elif rot == 270:
+        whole_img = whole_img.rot270()
+
+    if rot in [90, 270]:
+        img_height, img_width = img_width, img_height
+        tiles_across, tiles_down = tiles_down, tiles_across
+    # 写入一些参数，方便后面读取时候能用上
+
+    whole_img.set_type(pyvips.GValue.gint_type, "tiles_n_down", tiles_down)
+    whole_img.set_type(pyvips.GValue.gint_type, "tiles_n_across", tiles_across)
+
+    whole_img.set_type(pyvips.GValue.gint_type, "tiles_width", img_width)
+    whole_img.set_type(pyvips.GValue.gint_type, "tiles_height", img_height)
+
+    # whole_img.tiffsave(save_path, compression=compression, tile=True,
+    #                    tile_width=512, tile_height=512, Q=90,
+    #                    pyramid=True)
+    save_pyramid_tif(whole_img, save_path, compression=compression)
+    t3 = time.time()
+    print(f"Saving pyramid cost {t3-t2} s")
+
+    return save_path
+
 
 
 if __name__ == '__main__':

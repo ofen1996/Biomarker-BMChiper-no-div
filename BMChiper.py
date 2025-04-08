@@ -143,6 +143,35 @@ class ChipRegionMain(QMainWindow, Ui_MainWindow):
         with open(conf.ini_path, 'w', encoding="utf-8") as f:
             conf.conf.write(f)
         pass
+
+    def open_BH1000_img_cao(self):
+        try:
+            conf.reload()
+            if not isinstance(self.widget_right, ChipRegionWidget):
+                self.chip_region_setup_env()
+            filename_choose = FileDirBase.open_file(self, '*.ome.tif')
+            if filename_choose is None:
+                return
+            from merge_channels_pics_by_libvips import rotate_whole_tif
+            compression = conf.BH1000_compression if conf.BH1000_compression else "jpeg"
+            rot = int(conf.BH1000_rot) if conf.BH1000_rot else 90
+
+            filename_choose = rotate_whole_tif(filename_choose, save_path=None, compression=compression, rot=rot)
+
+            self.stitch_chip.setEnabled(False)
+            self.new_stitch_channel.setEnabled(True)
+            self.widget_right.read_image(filename_choose, mrxs_read_level=conf.mrxs_read_level)
+
+        except Exception as e:
+            print(traceback.format_exc(), e)
+            print("Error:", e)
+        # 记忆选择的路径
+        base_dir = os.path.split(filename_choose)[0]
+        conf.reload()
+        conf.conf.set("default", "base_dir", base_dir)
+        with open(conf.ini_path, 'w', encoding="utf-8") as f:
+            conf.conf.write(f)
+        pass
     # 采集芯片区域的4个点
     # pos, 0: left_top, 1: right_top, 2: right_bottom, 3: left_bottom
     def collect_points(self, pos):
