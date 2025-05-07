@@ -2,9 +2,9 @@ import sys
 import threading
 import time
 import traceback
-
+import copy
 import numpy as np
-import tifffile
+# import tifffile
 from PIL import Image
 
 from need.ofen_tool import load_json
@@ -29,9 +29,57 @@ from need.CorrectWholeImg import correct_whole_img
 
 from need.config import conf
 
+import builtins
+
+import logging
+logging.basicConfig(filename=__file__.replace(".py", ".log"), level=logging.DEBUG, format='%(asctime)s %(message)s')
+LOG = logging
+
+original_print = builtins.print
+
+# 保存原始 print 函数
+_original_print = builtins.print
 
 
+def custom_print(*args, **kwargs):
+    """自定义 print 函数，添加前缀并记录日志"""
+    # 处理要打印的消息
+    message = " ".join(str(arg) for arg in args)
 
+    # 调用原始 print
+    _original_print(message, **kwargs)
+
+    # 记录日志（假设 LOG 已定义）
+    LOG.info(message)
+
+
+# 替换内置 print 函数
+builtins.print = custom_print
+
+
+def show_wait_dialog(func):
+    # @wraps(func)
+    def wrapper(self, *args, **kwargs):
+        # 创建并显示等待对话框
+        wait_msg = QMessageBox(self)
+        wait_msg.setWindowTitle("请稍候")
+        wait_msg.setText("执行中，请稍后...")
+        wait_msg.setStandardButtons(QMessageBox.NoButton)  # 无按钮
+        wait_msg.setModal(True)  # 模态对话框
+        wait_msg.show()
+
+        # 强制立即显示（处理界面更新）
+        QApplication.processEvents()
+
+        try:
+            result = func(self, *args, **kwargs)
+            return result
+        finally:
+            # 确保对话框关闭
+            wait_msg.done(0)
+            QApplication.processEvents()
+
+    return wrapper
 
 # 定义图片展示函数
 ShowImageType = 1
@@ -111,6 +159,24 @@ class ChipRegionMain(QMainWindow, Ui_MainWindow):
         self.widget_right.setObjectName("widget_right")
         self.gridLayout_main.addWidget(self.widget_right, 0, 1, 1, 1)
         self.widget_right.setStyleSheet('#widget_right{background-color:#FF0000;}')
+
+    @show_wait_dialog
+    def open_he_img(self, filename_choose):
+        if filename_choose.endswith(".mrxs"):
+            self.stitch_chip.setEnabled(True)
+            self.new_stitch_channel.setEnabled(True)
+        elif filename_choose.endswith(".svs"):
+            self.stitch_chip.setEnabled(False)
+            self.new_stitch_channel.setEnabled(True)
+        elif filename_choose.endswith(".zarray"):
+            filename_choose = os.path.split(filename_choose)[0]
+            self.stitch_chip.setEnabled(False)
+            self.new_stitch_channel.setEnabled(True)
+        else:
+            self.stitch_chip.setEnabled(False)
+            self.new_stitch_channel.setEnabled(True)
+        self.widget_right.read_image(filename_choose, mrxs_read_level=conf.mrxs_read_level)
+
     def open_he_img_cao(self):
         try:
             conf.reload()
@@ -119,20 +185,8 @@ class ChipRegionMain(QMainWindow, Ui_MainWindow):
             filename_choose = FileDirBase.open_file(self,'*.tif *.tiff *.mrxs *.svs *.zarray')
             if filename_choose is None:
                 return
-            if filename_choose.endswith(".mrxs"):
-                self.stitch_chip.setEnabled(True)
-                self.new_stitch_channel.setEnabled(True)
-            elif filename_choose.endswith(".svs"):
-                self.stitch_chip.setEnabled(False)
-                self.new_stitch_channel.setEnabled(True)
-            elif filename_choose.endswith(".zarray"):
-                filename_choose = os.path.split(filename_choose)[0]
-                self.stitch_chip.setEnabled(False)
-                self.new_stitch_channel.setEnabled(True)
-            else:
-                self.stitch_chip.setEnabled(False)
-                self.new_stitch_channel.setEnabled(True)
-            self.widget_right.read_image(filename_choose, mrxs_read_level=conf.mrxs_read_level)
+            print(f"open img \n {filename_choose}")
+            self.open_he_img(filename_choose)
         except Exception as e:
             print(traceback.format_exc(), e)
             print("Error:", e)
@@ -144,6 +198,18 @@ class ChipRegionMain(QMainWindow, Ui_MainWindow):
             conf.conf.write(f)
         pass
 
+    @show_wait_dialog
+    def open_BH1000_img(self, filename_choose):
+        from merge_channels_pics_by_libvips import rotate_whole_tif
+        compression = conf.BH1000_compression if conf.BH1000_compression else "jpeg"
+        rot = int(conf.BH1000_rot) if conf.BH1000_rot else 90
+
+        filename_choose = rotate_whole_tif(filename_choose, save_path=None, compression=compression, rot=rot)
+
+        self.stitch_chip.setEnabled(False)
+        self.new_stitch_channel.setEnabled(True)
+        self.widget_right.read_image(filename_choose, mrxs_read_level=conf.mrxs_read_level)
+
     def open_BH1000_img_cao(self):
         try:
             conf.reload()
@@ -152,16 +218,8 @@ class ChipRegionMain(QMainWindow, Ui_MainWindow):
             filename_choose = FileDirBase.open_file(self, '*.ome.tif')
             if filename_choose is None:
                 return
-            from merge_channels_pics_by_libvips import rotate_whole_tif
-            compression = conf.BH1000_compression if conf.BH1000_compression else "jpeg"
-            rot = int(conf.BH1000_rot) if conf.BH1000_rot else 90
-
-            filename_choose = rotate_whole_tif(filename_choose, save_path=None, compression=compression, rot=rot)
-
-            self.stitch_chip.setEnabled(False)
-            self.new_stitch_channel.setEnabled(True)
-            self.widget_right.read_image(filename_choose, mrxs_read_level=conf.mrxs_read_level)
-
+            print(f"open BH1000 img \n {filename_choose}")
+            self.open_BH1000_img(filename_choose)
         except Exception as e:
             print(traceback.format_exc(), e)
             print("Error:", e)
@@ -204,7 +262,7 @@ class ChipRegionMain(QMainWindow, Ui_MainWindow):
     def stitch_chip_cao(self):
         conf.reload()  # 重新读取配置文件，以支持热修改
         if [-1, -1] in self.widget_right.draw_argvs['rect_points']:
-            print("请先选择4个点")
+            print("Please choose 4 points first!")
             return
         try:
             corners = np.asarray(self.widget_right.draw_argvs['rect_points'])
@@ -287,9 +345,13 @@ class ChipRegionMain(QMainWindow, Ui_MainWindow):
         print("std_d changed:", conf.std_d)
 
     def new_stitch_channel_cao(self):
+        self.new_stitch_channel_process()
+
+    @show_wait_dialog
+    def new_stitch_channel_process(self):
         conf.reload()  # 重新读取配置文件，以支持热修改
         if [-1, -1] in self.widget_right.draw_argvs['rect_points']:
-            print("请先选择4个点")
+            print("Please choose 4 points first!")
             return
         try:
             if self.widget_right.image_filename.endswith('.svs'):

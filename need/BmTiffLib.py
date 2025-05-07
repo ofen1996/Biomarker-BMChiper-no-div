@@ -25,7 +25,15 @@ def read_3_page_as_bands(pyramid_img_path, *args, **kwargs):
     #     tmp = read_pyramid_from_file(pyramid_img_path, page=i)
     #     G_B_channel.append(tmp)
     # whole_img = whole_img
-    whole_img = whole_img.bandjoin([read_pyramid_from_file(pyramid_img_path, page=channel, *args, **kwargs) for channel in (1, 2)])
+    bands = []
+    for channel in (1, 2):
+        try:
+            whole_img = whole_img.bandjoin(read_pyramid_from_file(pyramid_img_path, page=channel, *args, **kwargs))
+        except Exception as e:
+            print(f"channel {channel} read failed, use black channel!")
+            whole_img = whole_img.bandjoin_const(0)
+
+    # whole_img = whole_img.bandjoin([read_pyramid_from_file(pyramid_img_path, page=channel, *args, **kwargs) for channel in (1, 2)])
     return whole_img
 
 
@@ -133,13 +141,13 @@ def save_special_size(ome_tif_path, save_path, new_weight, new_height, compressi
 
     # 如果找到合适的层，读取并保存
     if closest_layer != -1:
-        print(f"选择的subifds金字塔层: {closest_layer}, 高度: {closest_height}")
+        print(f"subifds: {closest_layer}, height: {closest_height}")
         selected_layer_image = read_3_page_as_bands(ome_tif_path, subifd=closest_layer)
     else:
-        print("未找到符合要求的金字塔层。选择顶层操作")
+        print("Choose top subifd!")
         selected_layer_image = read_3_page_as_bands(ome_tif_path, memory=True)  # 此处memory=True是为了接近重复读取时候，报奇怪的错
 
     img_dist = selected_layer_image.numpy()
     img_dist = cv2.resize(img_dist, (new_weight, new_height))
     tifffile.imwrite(save_path, img_dist, compression=compression)
-    print(f"保存完成：{save_path}")
+    print(f"save done：{save_path}")
