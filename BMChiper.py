@@ -3,6 +3,7 @@ import threading
 import time
 import traceback
 import copy
+from threading import Thread
 import numpy as np
 # import tifffile
 from PIL import Image
@@ -32,25 +33,44 @@ from need.config import conf
 import builtins
 
 import logging
-logging.basicConfig(filename=__file__.replace(".py", ".log"), level=logging.DEBUG, format='%(asctime)s %(message)s')
-LOG = logging
 
-original_print = builtins.print
+# 为 custom_print 创建独立的日志记录器
+custom_logger = logging.getLogger('custom_print')
+custom_logger.setLevel(logging.INFO)
+log_file = os.path.splitext(__file__)[0] + "_custom.log"  # 独立的日志文件，例如 script_custom.log
+custom_handler = logging.FileHandler(log_file)
+custom_handler.setFormatter(logging.Formatter('%(asctime)s %(message)s'))
+custom_logger.addHandler(custom_handler)
+custom_logger.propagate = False  # 防止日志传播到其他 handler
+
+# 可选：配置主日志（用于其他模块的日志）
+logging.basicConfig(
+    filename=os.path.splitext(__file__)[0] + "_main.log",  # 其他日志写入 script_main.log
+    level=logging.INFO,
+    format='%(asctime)s %(message)s'
+)
+main_logger = logging.getLogger(__name__)
+
+# 禁用 pyvips 的调试日志（可选，防止其日志干扰）
+logging.getLogger('pyvips').setLevel(logging.WARNING)
 
 # 保存原始 print 函数
 _original_print = builtins.print
 
 
 def custom_print(*args, **kwargs):
-    """自定义 print 函数，添加前缀并记录日志"""
-    # 处理要打印的消息
-    message = " ".join(str(arg) for arg in args)
+    """自定义 print 函数，仅记录用户指定的消息"""
+    try:
+        # 将参数转换为字符串
+        message = " ".join(str(arg) for arg in args)
 
-    # 调用原始 print
-    _original_print(message, **kwargs)
+        # 调用原始 print
+        _original_print(*args, **kwargs)
 
-    # 记录日志（假设 LOG 已定义）
-    LOG.info(message)
+        # 使用独立的 custom_print 日志记录器
+        custom_logger.info(message)
+    except Exception as e:
+        _original_print(f"Logging failed: {e}", **kwargs)
 
 
 # 替换内置 print 函数
@@ -58,28 +78,50 @@ builtins.print = custom_print
 
 
 def show_wait_dialog(func):
-    # @wraps(func)
     def wrapper(self, *args, **kwargs):
-        # 创建并显示等待对话框
+        # Create and show the wait dialog
         wait_msg = QMessageBox(self)
         wait_msg.setWindowTitle("请稍候")
         wait_msg.setText("执行中，请稍后...")
-        wait_msg.setStandardButtons(QMessageBox.NoButton)  # 无按钮
-        wait_msg.setModal(True)  # 模态对话框
+        wait_msg.setStandardButtons(QMessageBox.NoButton)  # No buttons
+        wait_msg.setModal(True)  # Modal dialog
         wait_msg.show()
 
-        # 强制立即显示（处理界面更新）
+        # Force UI update
         QApplication.processEvents()
 
-        try:
-            result = func(self, *args, **kwargs)
-            return result
-        finally:
-            # 确保对话框关闭
-            wait_msg.done(0)
-            QApplication.processEvents()
+        # Variable to store the function result
+        result = [None]
+        exception = [None]
+
+        # Define the target function to run in the thread
+        def run_target():
+            try:
+                result[0] = func(self, *args, **kwargs)
+            except Exception as e:
+                exception[0] = e
+
+        # Start the function in a separate thread
+        thread = Thread(target=run_target)
+        thread.start()
+
+        # Keep the dialog open while the thread is running
+        while thread.is_alive():
+            QApplication.processEvents()  # Keep UI responsive
+            wait_msg.repaint()  # Ensure dialog stays visible
+
+        # Close the dialog
+        wait_msg.done(0)
+        QApplication.processEvents()
+
+        # Raise exception if one occurred in the thread
+        if exception[0]:
+            raise exception[0]
+
+        return result[0]
 
     return wrapper
+
 
 # 定义图片展示函数
 ShowImageType = 1
