@@ -1,0 +1,17 @@
+# Core numerical and image-processing stack
+numpy
+Pillow
+opencv-python
+matplotlib
+tifffile
+
+# Desktop application
+PyQt5
+
+# Inference and large-image processing
+onnxruntime
+pyvips
+scikit-learn
+
+# Optional whole-slide image support
+openslide-python
